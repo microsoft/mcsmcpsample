@@ -1,0 +1,27 @@
+{
+  "name": "Copilot Studio MCP Demo",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/azure-cli:1": {},
+    "ghcr.io/devcontainers/features/node:2": {
+      "version": "22",
+      "npmVersion": "10.9.0"
+    },
+    "ghcr.io/devcontainers/features/terraform:1": {
+      "terragrunt": "latest"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-azuretools.vscode-azurefunctions",
+        "ms-python.python",
+        "ms-python.vscode-python-envs"
+      ]
+    }
+  },
+  "forwardPorts": [7071],
+  "postCreateCommand": "npm install --global azure-functions-core-tools@4 --unsafe-perm true @polycloudinc/opmc && uv sync --project msft-mcmc-mcp"
+}

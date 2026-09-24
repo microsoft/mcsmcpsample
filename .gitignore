@@ -1,0 +1,19 @@
+.env
+.venv/
+__pycache__/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+*.py[cod]
+
+# Azure Functions local settings and build output
+local.settings.json
+.python_packages/
+
+# Terraform and Terragrunt generated or sensitive files
+*.tfstate
+*.tfstate.*
+*.tfplan
+.terraform/
+.terragrunt-cache/
+crash.log

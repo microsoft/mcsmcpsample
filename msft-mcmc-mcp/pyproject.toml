@@ -1,0 +1,41 @@
+[project]
+name = "msft-mcmc-mcp"
+version = "0.1.0"
+description = "Configurable MCP server for the Microsoft Copilot Studio demonstration"
+readme = "MCP.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "azure-functions==1.25.0",
+    "mcp==2.2.0",
+]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.18,<2",
+    "pytest>=8.4,<9",
+    "pytest-asyncio>=1.2,<2",
+    "ruff>=0.13,<1",
+]
+
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mcmc_mcp"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+
+[tool.pytest.ini_options]
+addopts = "--strict-config --strict-markers"
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
