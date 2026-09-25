@@ -62,9 +62,7 @@ class EntraTokenVerifierTests(unittest.TestCase):
 
         for name, overrides in cases:
             with self.subTest(name=name):
-                self.assertIsNone(
-                    asyncio.run(self.verifier.verify_token(self._token(overrides)))
-                )
+                self.assertIsNone(asyncio.run(self.verifier.verify_token(self._token(overrides))))
 
     def test_malformed_token_is_rejected(self) -> None:
         self.assertIsNone(asyncio.run(self.verifier.verify_token("not-a-jwt")))

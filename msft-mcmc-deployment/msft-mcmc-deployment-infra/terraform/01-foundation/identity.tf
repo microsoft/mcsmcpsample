@@ -115,7 +115,7 @@ resource "local_sensitive_file" "environment" {
   content              = <<-ENV
     MCMC_ENTRA_TENANT_ID=${var.tenant_id}
     MCMC_ENTRA_API_CLIENT_ID=${azuread_application.mcp_api.client_id}
-    MCMC_ENTRA_API_AUDIENCE=${one(azuread_application.mcp_api.identifier_uris)}
+    MCMC_ENTRA_API_AUDIENCE=${azuread_application.mcp_api.client_id}
     MCMC_ENTRA_SCOPE=${one(azuread_application.mcp_api.identifier_uris)}/access_as_user
     MCMC_ENTRA_CLI_CLIENT_ID=${azuread_application.mcp_cli.client_id}
     MCMC_JAMES_UPN=${azuread_user.demo["james"].user_principal_name}

@@ -84,8 +84,8 @@ output "entra_mcp_api_client_id" {
 }
 
 output "entra_mcp_api_audience" {
-  description = "Expected audience of MCP API access tokens."
-  value       = one(azuread_application.mcp_api.identifier_uris)
+  description = "Expected client-ID audience of v2 MCP API access tokens."
+  value       = azuread_application.mcp_api.client_id
 }
 
 output "entra_mcp_delegated_scope" {

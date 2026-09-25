@@ -57,3 +57,11 @@ The local demonstration access matrix is:
 | Bill | None |
 
 These names identify disposable Entra test profiles created by Foundation. Their immutable object identifiers are supplied to the service as the access policy; display names and user principal names are never authorization subjects. In `trusted` mode, APIM owns authorization and the server exposes the complete fictitious catalog.
+
+## Demonstration CLI
+
+The component installs an `mcp` console command. Run `mcp --user james`, `mcp --user jane`, or `mcp --user bill` from the repository root so the command can read the gitignored root `.env`. User arguments are lowercase; structured output retains the display names James, Jane, and Bill. The endpoint defaults to `http://127.0.0.1:8000/mcp`; set `MCMC_MCP_URL` for another Streamable HTTP endpoint or `MCMC_ENV_FILE` for another environment-file location.
+
+The CLI allowlists only the tenant ID, public-client ID, delegated scope, and selected user's principal name and object identifier. It does not load initial-password variables. MSAL initiates an interactive device-code flow through the nonsecret native public client and keeps its token cache in memory. The CLI displays Microsoft's device-code message, then rejects the token unless its `oid` matches the selected user's configured object identifier.
+
+After authentication, the CLI sends the bearer token through the official MCP Python SDK Streamable HTTP client, discovers both customer tools, invokes the list tool and representative lookup calls, and prints structured JSON containing only the selected display name, discovered tool names, and authorized fictitious customers. Invalid users, configuration errors, wrong-user sign-in, refused or blocked consent, malformed tokens, authorization failures, missing tools, and transport errors return a nonzero exit without including provider details, passwords, access tokens, or customer data from failed requests.

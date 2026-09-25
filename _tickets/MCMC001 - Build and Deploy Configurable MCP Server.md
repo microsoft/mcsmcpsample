@@ -204,16 +204,16 @@ Verification:
 
 ## Phase 4: Build the Python Demonstration CLI
 
-- [ ] Implement the CLI entry point and `mcp --user James|Jane|Bill` argument validation.
-- [ ] Load the selected test user's expected principal name and object identifier from `.env` without reading or echoing the initial password.
-- [ ] Implement device-code authentication with the native public client, interactive first-use user consent, in-memory token handling, and selected-user `oid` verification.
-- [ ] Invoke MCP discovery and customer tools and render authorized results and sanitized errors.
+- [x] Implement the CLI entry point and `mcp --user james|jane|bill` argument validation.
+- [x] Load the selected test user's expected principal name and object identifier from `.env` without reading or echoing the initial password.
+- [x] Implement device-code authentication with the native public client, interactive first-use user consent, in-memory token handling, and selected-user `oid` verification.
+- [x] Invoke MCP discovery and customer tools and render authorized results and sanitized errors.
 
 Verification:
 
-- [ ] Run CLI unit tests with mocked device-code, consent, token, and MCP responses.
-- [ ] Verify each supported user produces the expected access result against the local server.
-- [ ] Verify invalid users, wrong-user sign-in, refused or policy-blocked consent, failed authentication, and authorization failures return nonzero exits without leaking passwords, device codes, or tokens.
+- [x] Run CLI unit tests with mocked device-code, consent, token, and MCP responses.
+- [x] Verify each supported user produces the expected access result against the local server.
+- [x] Verify invalid users, wrong-user sign-in, refused or policy-blocked consent, failed authentication, and authorization failures return nonzero exits without leaking passwords, device codes, or tokens.
 
 ## Phase 5: Build and Deploy the Container Apps Application Layer
 
