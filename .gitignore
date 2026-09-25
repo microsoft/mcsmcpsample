@@ -1,4 +1,6 @@
 .env
+.env.*
+!.env.example
 .venv/
 __pycache__/
 .mypy_cache/
@@ -14,6 +16,17 @@ local.settings.json
 *.tfstate
 *.tfstate.*
 *.tfplan
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+!*.tfvars.json.example
 .terraform/
 .terragrunt-cache/
+.terraform-state/
+.terraformrc
+terraform.rc
+credentials.tfrc.json
+.artifacts/
+**/02-container/image.json
 crash.log
+crash.*.log

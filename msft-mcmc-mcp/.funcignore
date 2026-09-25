@@ -1,7 +1,0 @@
-.git/
-.venv/
-.python-version
-MCP.md
-pyproject.toml
-tests/
-uv.lock

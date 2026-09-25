@@ -6,16 +6,22 @@ This project demonstrates Microsoft Copilot Studio connecting through Azure API 
 
 The following findings are listed in reverse chronological order.
 
-1. The Copilot Studio trial supports creating, configuring, previewing, and testing agents, but it does not support publishing them. The trial product provides tenant capacity and cannot be assigned to a user or device. Publishing requires an appropriate paid subscription or supported pay-as-you-go arrangement.
-2. Copilot Studio supports MCP servers directly as agent tools. A connection requires a server name, description, and server URL; the interface presents `/mcp` as the expected endpoint pattern.
-3. MCP connections support no authentication, API-key authentication, and OAuth 2.0.
-4. OAuth 2.0 supports dynamic configuration with discovery, dynamic configuration, and manual configuration.
-5. Manual OAuth requires a client ID, client secret, authorization URL, token URL, refresh-token URL, and scopes.
-6. Dynamic OAuth with discovery requires only the MCP server URL and delegates metadata discovery to Copilot Studio. Manual OAuth remains the predictable initial option for a Microsoft Entra ID integration.
-7. Connector and MCP catalog loading errors do not necessarily prevent adding a new MCP server through **Add** > **Model Context Protocol (MCP)**.
-8. Dataverse and Copilot Studio provisioning are eventually consistent. Dataverse can report `Ready` before the Copilot Studio solution is fully available; refreshing after provisioning completes can resolve agent-creation errors.
-9. The existing `Contoso (default)` Power Platform environment is usable. Dataverse has been provisioned, and the `MCP Capability Test` agent has been created.
-10. The current user has sufficient administrative access: Global Administrator in Microsoft Entra ID, Azure Owner at management-group scope, and Environment Maker plus Basic User roles in Dataverse. A separate Copilot Studio tenant is not required.
+1. On 2026-09-25, the licensed-tenant `MCP Capability Test` agent connected to the public Standard v2 APIM gateway using an API-scoped subscription key. APIM reached the MCP server through outbound VNet integration, private DNS, and the private Container Apps environment; the backend remained unavailable through public DNS.
+2. Copilot Studio discovered `list_accessible_customers` and `get_accessible_customer` over Streamable HTTP at `/mcp`. The editor displayed `We couldn't load this tool's contract` while still listing and successfully invoking both tools, so that warning did not indicate a blocking protocol incompatibility.
+3. `list_accessible_customers` returned and rendered all four fictitious records with customer number, name, reserved fictional phone number, and `example.com` email address.
+4. `get_accessible_customer` returned the expected `CUST-1002` record. An invalid `CUST-001` lookup returned no customer, after which the agent used the list result to suggest the valid `CUST-1001` through `CUST-1004` range.
+5. The observed Copilot Studio responses and citations exposed no APIM subscription key, access token, credentials, or non-fictitious customer data.
+6. The visible Copilot Studio activity trace identified the invoked MCP tool but did not expose a request correlation identifier. End-to-end correlation through Copilot Studio, APIM, and Container Apps remains to be captured from sanitized telemetry.
+7. The Copilot Studio trial supports creating, configuring, previewing, and testing agents, but it does not support publishing them. The trial product provides tenant capacity and cannot be assigned to a user or device. Publishing requires an appropriate paid subscription or supported pay-as-you-go arrangement.
+8. Copilot Studio supports MCP servers directly as agent tools. A connection requires a server name, description, and server URL; the interface presents `/mcp` as the expected endpoint pattern.
+9. MCP connections support no authentication, API-key authentication, and OAuth 2.0.
+10. OAuth 2.0 supports dynamic configuration with discovery, dynamic configuration, and manual configuration.
+11. Manual OAuth requires a client ID, client secret, authorization URL, token URL, refresh-token URL, and scopes.
+12. Dynamic OAuth with discovery requires only the MCP server URL and delegates metadata discovery to Copilot Studio. Manual OAuth remains the predictable initial option for a Microsoft Entra ID integration.
+13. Connector and MCP catalog loading errors do not necessarily prevent adding a new MCP server through **Add** > **Model Context Protocol (MCP)**.
+14. Dataverse and Copilot Studio provisioning are eventually consistent. Dataverse can report `Ready` before the Copilot Studio solution is fully available; refreshing after provisioning completes can resolve agent-creation errors.
+15. The existing `Contoso (default)` Power Platform environment is usable. Dataverse has been provisioned, and the `MCP Capability Test` agent has been created.
+16. The current user has sufficient administrative access: Global Administrator in Microsoft Entra ID, Azure Owner at management-group scope, and Environment Maker plus Basic User roles in Dataverse. A separate Copilot Studio tenant is not required.
 
 ## Revised Execution Plan
 
@@ -32,4 +38,4 @@ The following findings are listed in reverse chronological order.
 
 ## Immediate Next Step
 
-Define the two demonstration MCP tools and their input and output schemas before implementing the server.
+Capture a sanitized correlation identifier across APIM and Container Apps for a Copilot Studio invocation, then remove the temporary Copilot Studio tool connection before beginning the Entra authentication phase.

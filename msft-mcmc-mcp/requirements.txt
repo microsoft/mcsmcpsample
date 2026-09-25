@@ -1,2 +1,0 @@
-azure-functions==1.25.0
-mcp==2.2.0

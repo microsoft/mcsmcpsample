@@ -23,5 +23,5 @@
     }
   },
   "forwardPorts": [7071],
-  "postCreateCommand": "npm install --global azure-functions-core-tools@4 --unsafe-perm true @polycloudinc/opmc && uv sync --project msft-mcmc-mcp"
+  "postCreateCommand": "npm install --global azure-functions-core-tools@4 --unsafe-perm true @polycloudinc/opmc && uv sync --project msft-mcmc-mcp/msft-mcmc-mcp-service"
 }

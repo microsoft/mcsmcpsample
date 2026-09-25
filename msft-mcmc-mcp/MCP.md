@@ -1,26 +1,36 @@
 # MCP
 
-The MCP module owns the configurable Model Context Protocol server, its Azure Functions application package, its demonstration CLI, and application tests.
+The MCP module owns the configurable Model Context Protocol server, its OCI image definition, its demonstration CLI, and application tests.
 
 The module coordinate is `msft-mcmc-mcp`, derived from the repository organization, product, and module identity files.
 
 ## Runtime and SDK
 
-The module targets Python 3.12 on Azure Functions runtime v4 using the Python v2 programming model. It uses the official MCP Python SDK v2 for Streamable HTTP protocol handling and `uv` for local dependency and environment management.
+The module targets Python 3.12 and runs as a standalone ASGI application under Uvicorn. It uses the official MCP Python SDK v2 for Streamable HTTP protocol handling and `uv` for dependency and environment management.
 
-Production dependencies are pinned in `requirements.txt` for Azure Functions remote builds and mirrored in `pyproject.toml`. Development dependencies and tool configuration are defined in `pyproject.toml`.
+Production dependencies are declared in `pyproject.toml` and pinned in `uv.lock`. Development dependencies and tool configuration are defined in `pyproject.toml`. Python packages resolve through the corporate `https://packagefeedproxy.microsoft.io/pypi/simple` feed in both the development container and service image.
+
+Run formatting, linting, type checking, startup validation, and tests from the `msft-mcmc-mcp-service/` component directory.
 
 ## Structure
 
-- `src/mcmc_mcp/` contains reusable application code.
-- `tests/` contains unit and protocol tests.
-- `host.json` configures the Azure Functions host with no route prefix so the MCP transport can be served at `/mcp`.
+- `msft-mcmc-mcp-service/` is the `msft-mcmc-mcp-service` OPMC component and owns the deployable containerized service.
+- `msft-mcmc-mcp-service/src/mcmc_mcp/` contains reusable application code.
+- `msft-mcmc-mcp-service/tests/` contains unit and protocol tests.
+- `msft-mcmc-mcp-service/container_app.py` creates the standalone ASGI application.
+- `msft-mcmc-mcp-service/Dockerfile` creates the non-root Python 3.12 runtime image and exposes port `8000`.
 
 ## HTTP Application
 
-The Azure Functions v2 entry point adapts the SDK's ASGI application directly. It exposes stateless Streamable HTTP at `POST /mcp` and an unauthenticated `GET /health` endpoint. The superseded SSE transport is not registered.
+The standalone ASGI entry point exposes stateless Streamable HTTP at `POST /mcp` and an unauthenticated `GET /health` endpoint. Uvicorn listens on port `8000`. The superseded SSE transport is not registered.
 
 Every HTTP response includes `x-correlation-id`. A caller-supplied identifier is retained only when it contains 1-128 ASCII letters, digits, dots, underscores, or hyphens; otherwise the server generates a UUID. Completion logs contain only this identifier, method, route, status, and duration. Request headers, authorization values, customer payloads, and response bodies are not logged.
+
+## Container Image
+
+The image build uses the locked production dependency set and runs as unprivileged user `10001`. The ordered deployment layer derives the image tag from the root `version` file as `VERSION_MAJOR.VERSION_MINOR.VERSION_REVISION.VERSION_BUILD`. It replaces the revision with the current branch commit count and increments and persists the build number before invoking ACR Build through the current Microsoft Entra-authenticated Azure CLI session. Existing tags are rejected and the pushed manifest digest is reported.
+
+The ACR artifact repository uses the fully qualified component name `msft-mcmc-mcp-service`. The current validated image is `mcmc677e8052.azurecr.io/msft-mcmc-mcp-service:0.0.1.3`, with digest `sha256:83d9ca5c9590a758002f098061ab621face777bd44e12a9b95f0d36eb35dbf7e`.
 
 ## Authentication Modes
 
@@ -28,7 +38,9 @@ Every HTTP response includes `x-correlation-id`. A caller-supplied identifier is
 
 In `trusted` mode, the application rejects native OAuth configuration and returns the complete fictitious catalog because APIM owns authentication and authorization. This mode must eventually be reachable only through APIM; private ingress enforcement is delivered by the deployment and APIM tickets.
 
-In `entra` mode, application creation requires both MCP OAuth settings and a token verifier. Tool authorization consumes only the verifier-produced access token and maps its immutable `oid` claim to customer numbers. A missing, malformed, or unmapped `oid` receives an empty access set. Entra JWT verification and environment-backed object mappings are intentionally completed in Phase 3 of `MCMC001`.
+In `entra` mode, startup requires the tenant ID, API audience, delegated scope, HTTPS resource-server URL, and a JSON access policy keyed by immutable Entra object identifier. The production verifier resolves the tenant's signing keys through its v2 JWKS endpoint and accepts only RS256 tokens with valid signature, issuer, audience, lifetime, tenant, delegated `scp`, and nonempty `oid` claims. The MCP SDK advertises protected-resource metadata at the HTTPS MCP URL while audience validation remains in the Entra verifier.
+
+Tool authorization consumes only verifier-produced claims and maps `oid` to customer numbers. Missing, malformed, and unmapped identities receive an empty access set. Access tokens, authorization headers, and identity mappings are not logged.
 
 ## Customer Tools
 
@@ -44,4 +56,4 @@ The local demonstration access matrix is:
 | Jane | `CUST-1003`, `CUST-1004` |
 | Bill | None |
 
-These names identify test profiles only. In `entra` mode, a later infrastructure phase maps each profile to the corresponding validated Entra `oid`; display names are never authorization subjects. In `trusted` mode, APIM owns authorization and the server exposes the complete fictitious catalog.
+These names identify disposable Entra test profiles created by Foundation. Their immutable object identifiers are supplied to the service as the access policy; display names and user principal names are never authorization subjects. In `trusted` mode, APIM owns authorization and the server exposes the complete fictitious catalog.

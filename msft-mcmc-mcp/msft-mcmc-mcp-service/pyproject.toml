@@ -2,11 +2,12 @@
 name = "msft-mcmc-mcp"
 version = "0.1.0"
 description = "Configurable MCP server for the Microsoft Copilot Studio demonstration"
-readme = "MCP.md"
+readme = { text = "Configurable MCP server for the Microsoft Copilot Studio demonstration.", content-type = "text/markdown" }
 requires-python = ">=3.12,<3.13"
 dependencies = [
-    "azure-functions==1.25.0",
     "mcp==2.2.0",
+    "pyjwt[crypto]==2.14.0",
+    "uvicorn==0.53.0",
 ]
 
 [dependency-groups]
