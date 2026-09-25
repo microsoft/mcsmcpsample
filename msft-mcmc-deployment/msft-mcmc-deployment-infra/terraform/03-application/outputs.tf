@@ -13,8 +13,28 @@ output "container_app_fqdn" {
   value       = azurerm_container_app.trusted.ingress[0].fqdn
 }
 
+output "entra_container_app_id" {
+  description = "Resource identifier of the Entra-mode Container App."
+  value       = azurerm_container_app.entra.id
+}
+
+output "entra_container_app_name" {
+  description = "Name of the Entra-mode Container App."
+  value       = azurerm_container_app.entra.name
+}
+
+output "entra_container_app_fqdn" {
+  description = "Private FQDN of the Entra-mode Container App."
+  value       = azurerm_container_app.entra.ingress[0].fqdn
+}
+
+output "entra_mcp_url" {
+  description = "Private Streamable HTTP endpoint of the Entra-mode Container App."
+  value       = "https://${azurerm_container_app.entra.ingress[0].fqdn}/mcp"
+}
+
 output "container_image" {
-  description = "Immutable ACR image deployed to the Container App."
+  description = "Immutable ACR image deployed to both Container Apps."
   value       = local.container_image
 }
 

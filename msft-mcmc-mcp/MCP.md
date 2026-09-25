@@ -30,7 +30,7 @@ Every HTTP response includes `x-correlation-id`. A caller-supplied identifier is
 
 The image build uses the locked production dependency set and runs as unprivileged user `10001`. The ordered deployment layer derives the image tag from the root `version` file as `VERSION_MAJOR.VERSION_MINOR.VERSION_REVISION.VERSION_BUILD`. It replaces the revision with the current branch commit count and increments and persists the build number before invoking ACR Build through the current Microsoft Entra-authenticated Azure CLI session. Existing tags are rejected and the pushed manifest digest is reported.
 
-The ACR artifact repository uses the fully qualified component name `msft-mcmc-mcp-service`. The current validated image is `mcmc677e8052.azurecr.io/msft-mcmc-mcp-service:0.0.1.3`, with digest `sha256:83d9ca5c9590a758002f098061ab621face777bd44e12a9b95f0d36eb35dbf7e`.
+The ACR artifact repository uses the fully qualified component name `msft-mcmc-mcp-service`. The current validated image is `mcmc677e8052.azurecr.io/msft-mcmc-mcp-service:0.0.3.5`, with digest `sha256:165930594cff15507b0ed3d885c554c115bd9a40d8bc0aa8587f5f9c4f472a2f`. The private trusted and Entra Container Apps run this same immutable digest.
 
 ## Authentication Modes
 
@@ -65,3 +65,5 @@ The component installs an `mcp` console command. Run `mcp --user james`, `mcp --
 The CLI allowlists only the tenant ID, public-client ID, delegated scope, and selected user's principal name and object identifier. It does not load initial-password variables. MSAL initiates an interactive device-code flow through the nonsecret native public client and keeps its token cache in memory. The CLI displays Microsoft's device-code message, then rejects the token unless its `oid` matches the selected user's configured object identifier.
 
 After authentication, the CLI sends the bearer token through the official MCP Python SDK Streamable HTTP client, discovers both customer tools, invokes the list tool and representative lookup calls, and prints structured JSON containing only the selected display name, discovered tool names, and authorized fictitious customers. Invalid users, configuration errors, wrong-user sign-in, refused or blocked consent, malformed tokens, authorization failures, missing tools, and transport errors return a nonzero exit without including provider details, passwords, access tokens, or customer data from failed requests.
+
+The deployed private Entra app was validated through a temporary Azure management-plane exec shell in its running replica. Independent device-code runs returned only `CUST-1001` and `CUST-1002` for James, only `CUST-1003` and `CUST-1004` for Jane, and no customers for Bill. Missing and malformed bearer requests returned `401`, while both private backend names remained unavailable through public DNS. No public ingress or APIM route was added for this validation path.

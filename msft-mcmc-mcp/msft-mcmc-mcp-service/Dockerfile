@@ -12,7 +12,7 @@ WORKDIR /app
 RUN useradd --create-home --uid 10001 app
 
 COPY pyproject.toml uv.lock ./
-RUN pip install --no-cache-dir uv==0.12.18 \
+RUN pip install --no-cache-dir uv==0.12.16 \
     && uv sync --frozen --no-dev --no-install-project
 
 COPY src ./src

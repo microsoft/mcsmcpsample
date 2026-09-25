@@ -7,7 +7,7 @@ code: MCMC001
 aliases:
   - MCMC001
 name: Build and Deploy Configurable MCP Server
-ticket_status: "[[In Progress]]"
+ticket_status: "[[Done]]"
 ---
 # Specification
 
@@ -159,12 +159,12 @@ Verification:
 - [x] Add the licensed-tenant APIM `/mcp` endpoint to the existing Microsoft Copilot Studio test agent using the API-scoped APIM subscription key.
 - [x] Use Copilot Studio Preview to discover the list and lookup tools and invoke them with representative prompts.
 - [x] Capture sanitized Copilot Studio compatibility and data-exposure findings in the root README.
-- [ ] Capture a sanitized request correlation across APIM and Container Apps, then remove the tool connection.
+- [x] Capture a sanitized request correlation across APIM and Container Apps, then remove the tool connection.
 - [x] Destroy the temporary public endpoint from the original tenant after the smoke-test attempt.
 
 The original-tenant deployment passed direct health, MCP initialization, tool discovery, and tool invocation checks. Copilot Studio agent creation was blocked by `User license not found`, so no tool connection was created and the Copilot Studio checks remain open. The disposable `mcmc-smoke-rg` resource group was deleted on 2026-09-25 before moving the test to a licensed tenant.
 
-The licensed-tenant Copilot Studio test connected to `https://mcmc-<subscription-prefix>-apim.azure-api.net/mcp` through the APIM subscription-key connection. Preview discovered `list_accessible_customers` and `get_accessible_customer`, rendered all four fictitious records from the list tool, returned the expected `CUST-1002` record from the lookup tool, and correctly returned no customer for the invalid `CUST-001` lookup. Copilot Studio displayed a tool-contract loading warning while still discovering and invoking both contracts successfully. No credentials, tokens, or non-fictitious data appeared in the observed responses.
+The licensed-tenant Copilot Studio test connected to `https://mcmc-<subscription-prefix>-apim.azure-api.net/mcp` through the APIM subscription-key connection. Preview discovered `list_accessible_customers` and `get_accessible_customer`, rendered all four fictitious records from the list tool, returned the expected `CUST-1002` record from the lookup tool, and correctly returned no customer for the invalid `CUST-001` lookup. Copilot Studio displayed a tool-contract loading warning while still discovering and invoking both contracts successfully. No credentials, tokens, or non-fictitious data appeared in the observed responses. A uniquely tagged `GET /health` request returned `200` through APIM and the same sanitized correlation identifier appeared in the private `mcmc-mcp-trusted` Container App telemetry. The temporary MCP tool connection was then removed from the test agent.
 
 ### Licensed-Tenant Foundation Deployment
 
@@ -221,31 +221,37 @@ Verification:
 - [x] Publish the fully qualified `msft-mcmc-mcp-service` artifact from the ordered `02-container` layer, derive its dotted image tag from the root `version` file, use the current branch commit count as the revision, increment and persist the build number on every execution, push through Entra-authenticated ACR Build, and record the digest without enabling administrator credentials.
 - [x] Create the ordered `03-application` Terraform and Terragrunt stack with a dedicated local state file.
 - [x] Read the required `01-foundation` outputs explicitly and create a user-assigned identity with `AcrPull` for the application.
-- [x] Deploy one private `trusted` Container App from the exact validated `msft-mcmc-mcp-service:0.0.1.3` digest with internal ingress on port `8000`, `/health` startup, readiness, and liveness probes, and `AUTH_MODE=trusted`.
+- [x] Deploy one private `trusted` Container App from the exact validated `msft-mcmc-mcp-service:0.0.3.5` digest with internal ingress on port `8000`, `/health` startup, readiness, and liveness probes, and `AUTH_MODE=trusted`.
 - [x] Configure the trusted MCP API in APIM with `/mcp` and `/health` operations routed to the private Container App.
 - [x] Require an API-scoped APIM subscription key and verify keyless requests are rejected.
-- [ ] After Phase 3 token verification is complete, extend `03-application` with the private `entra` Container App using the same immutable image contract and mode-specific configuration.
+- [x] After Phase 3 token verification is complete, extend `03-application` with the private `entra` Container App using the same immutable image contract and mode-specific configuration.
 
 Verification:
 
 - [x] Run image, Terraform, formatting, validation, and plan checks.
 - [x] Verify the deployment module coordinate resolves to `msft-mcmc-deployment`.
 - [x] Verify the private `trusted` Container App becomes healthy and runs the expected immutable image digest.
-- [ ] After the `entra` app is added, verify both Container Apps run the same expected immutable image digest.
+- [x] After the `entra` app is added, verify both Container Apps run the same expected immutable image digest.
 - [x] Verify private name resolution and HTTPS access from APIM's authorized VNet integration path.
 - [x] Verify the trusted Container App has no public DNS resolution outside the private environment path.
 
+Both private applications run `msft-mcmc-mcp-service:0.0.3.5` at digest `sha256:165930594cff15507b0ed3d885c554c115bd9a40d8bc0aa8587f5f9c4f472a2f`. The Entra revision started successfully with one replica and returned `200` to its configured health probes. The trusted endpoint continued to return `200` through APIM after the shared image rollout. The first replacement build consumed version `0.0.3.4` but was not published because the corporate package source did not contain the pinned `uv` release; the successful image uses the newest available corporate-feed release.
+
 ## Phase 6: Validate the Deployed Demonstration and Handoff
 
-- [ ] Run the Python CLI against the deployed `entra` Container App for James, Jane, and Bill.
-- [ ] Exercise the `trusted` Container App from a temporary authorized private test path without native token validation.
-- [ ] Validate correlation identifiers and sanitized telemetry across client and Container App requests.
-- [ ] Document deployment, configuration, operation, teardown, and the APIM-only ingress control to be completed by `MCMC002`.
-- [ ] Update the affected product and module documentation with the implemented current state.
+- [x] Run the Python CLI against the deployed `entra` Container App for James, Jane, and Bill.
+- [x] Exercise the `trusted` Container App from a temporary authorized private test path without native token validation.
+- [x] Validate correlation identifiers and sanitized telemetry across client and Container App requests.
+- [x] Document deployment, configuration, operation, teardown, and the APIM-only ingress control to be completed by `MCMC002`.
+- [x] Update the affected product and module documentation with the implemented current state.
 
 Verification:
 
-- [ ] Confirm deployed James, Jane, and Bill results match the defined access matrix.
-- [ ] Confirm invalid tokens and direct public access are rejected.
-- [ ] Run the complete automated test suite and Terraform checks from a clean workspace.
-- [ ] Destroy disposable resources in application-then-foundation order and verify identities, Container Apps, ACR, the private environment, and local secret files are removed as documented.
+- [x] Confirm deployed James, Jane, and Bill results match the defined access matrix.
+- [x] Confirm invalid tokens and direct public access are rejected.
+- [x] Run the complete automated test suite and Terraform checks from a clean workspace.
+- [x] Resolve teardown disposition: retain the validated disposable environment at the operator's request and document application-first destruction and verification for later execution.
+
+The deployed Entra validation used an Azure management-plane exec shell in the running private replica as a temporary authorized path, without adding public ingress or an APIM route. The CLI completed independent device-code flows against the private HTTPS MCP endpoint: James received only `CUST-1001` and `CUST-1002`, Jane received only `CUST-1003` and `CUST-1004`, and Bill received an empty customer list. Every run discovered and exercised both customer tools. Missing and malformed bearer tokens returned `401`, and neither private backend FQDN resolved through public DNS. A separate management-plane exec shell in the trusted replica used the official MCP client with no authorization header, discovered both tools, and returned all four fictitious customers. A tagged MCP discovery request propagated its client-generated correlation identifier to the private Container App logs; each matching telemetry record contained only correlation ID, duration, event, method, path, and status. The final gate passed all 39 service tests, Ruff lint and formatting, strict mypy, both Terraform validations, repository hygiene checks, and no-change plans for both Terraform states.
+
+Destructive teardown was offered after validation and deferred at the operator's request on 2026-09-25. Ticket closure accepts this explicit exception: the live disposable resources and local secret-bearing state remain in place, and the documented teardown procedure must be used when the environment is no longer needed.

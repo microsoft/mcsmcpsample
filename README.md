@@ -11,7 +11,7 @@ The following findings are listed in reverse chronological order.
 3. `list_accessible_customers` returned and rendered all four fictitious records with customer number, name, reserved fictional phone number, and `example.com` email address.
 4. `get_accessible_customer` returned the expected `CUST-1002` record. An invalid `CUST-001` lookup returned no customer, after which the agent used the list result to suggest the valid `CUST-1001` through `CUST-1004` range.
 5. The observed Copilot Studio responses and citations exposed no APIM subscription key, access token, credentials, or non-fictitious customer data.
-6. The visible Copilot Studio activity trace identified the invoked MCP tool but did not expose a request correlation identifier. End-to-end correlation through Copilot Studio, APIM, and Container Apps remains to be captured from sanitized telemetry.
+6. A uniquely tagged `GET /health` request returned `200` through APIM and the same sanitized correlation identifier appeared in the private Container App telemetry, proving propagation across the gateway-to-backend path without recording the identifier value. The temporary MCP tool connection was removed from the Copilot Studio test agent after the smoke test.
 7. The Copilot Studio trial supports creating, configuring, previewing, and testing agents, but it does not support publishing them. The trial product provides tenant capacity and cannot be assigned to a user or device. Publishing requires an appropriate paid subscription or supported pay-as-you-go arrangement.
 8. Copilot Studio supports MCP servers directly as agent tools. A connection requires a server name, description, and server URL; the interface presents `/mcp` as the expected endpoint pattern.
 9. MCP connections support no authentication, API-key authentication, and OAuth 2.0.
@@ -119,4 +119,4 @@ Successful runs print structured JSON containing the selected display name, the 
 
 ## Immediate Next Step
 
-Capture a sanitized correlation identifier across APIM and Container Apps for a Copilot Studio invocation, then remove the temporary Copilot Studio tool connection before beginning the Entra authentication phase.
+The validated disposable environment is intentionally retained at the operator's request. When testing is complete, destroy resources in application-then-foundation order and remove local secret-bearing state using the documented procedure.

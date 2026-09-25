@@ -53,6 +53,31 @@ variable "container_app_name" {
   type        = string
 }
 
+variable "entra_container_app_name" {
+  description = "Name of the Entra-mode Container App."
+  type        = string
+}
+
+variable "entra_tenant_id" {
+  description = "Microsoft Entra tenant identifier accepted by the MCP API."
+  type        = string
+}
+
+variable "entra_api_audience" {
+  description = "Client-ID audience accepted in Entra v2 MCP API access tokens."
+  type        = string
+}
+
+variable "entra_delegated_scope" {
+  description = "Fully qualified delegated scope exposed by the MCP API."
+  type        = string
+}
+
+variable "entra_oid_access" {
+  description = "Customer access policy keyed by immutable Microsoft Entra object identifier."
+  type        = map(list(string))
+}
+
 variable "api_management_name" {
   description = "Foundation Azure API Management service name."
   type        = string

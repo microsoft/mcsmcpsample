@@ -1,6 +1,8 @@
 locals {
-  container_image  = "${var.container_registry_login_server}/${var.container_image_repository}@${var.container_image_digest}"
-  application_fqdn = "${var.container_app_name}.${var.container_app_environment_default_domain}"
+  container_image        = "${var.container_registry_login_server}/${var.container_image_repository}@${var.container_image_digest}"
+  application_fqdn       = "${var.container_app_name}.${var.container_app_environment_default_domain}"
+  entra_application_fqdn = "${var.entra_container_app_name}.${var.container_app_environment_default_domain}"
+  entra_required_scope   = element(reverse(split("/", var.entra_delegated_scope)), 0)
   api_operations = {
     mcp_get = {
       display_name = "Open MCP stream"
@@ -86,6 +88,116 @@ resource "azurerm_container_app" "trusted" {
       env {
         name  = "MCP_ALLOWED_HOSTS"
         value = local.application_fqdn
+      }
+
+      startup_probe {
+        transport               = "HTTP"
+        path                    = "/health"
+        port                    = 8000
+        initial_delay           = 1
+        interval_seconds        = 3
+        timeout                 = 2
+        failure_count_threshold = 30
+      }
+
+      readiness_probe {
+        transport               = "HTTP"
+        path                    = "/health"
+        port                    = 8000
+        interval_seconds        = 5
+        timeout                 = 2
+        failure_count_threshold = 6
+        success_count_threshold = 1
+      }
+
+      liveness_probe {
+        transport               = "HTTP"
+        path                    = "/health"
+        port                    = 8000
+        initial_delay           = 10
+        interval_seconds        = 10
+        timeout                 = 2
+        failure_count_threshold = 3
+      }
+    }
+  }
+
+  depends_on = [azurerm_role_assignment.image_pull]
+}
+
+resource "azurerm_container_app" "entra" {
+  name                         = var.entra_container_app_name
+  container_app_environment_id = var.container_app_environment_id
+  resource_group_name          = var.resource_group_name
+  revision_mode                = "Single"
+  workload_profile_name        = "Consumption"
+  tags                         = var.tags
+
+  identity {
+    type         = "UserAssigned"
+    identity_ids = [azurerm_user_assigned_identity.application.id]
+  }
+
+  registry {
+    server   = var.container_registry_login_server
+    identity = azurerm_user_assigned_identity.application.id
+  }
+
+  ingress {
+    external_enabled           = true
+    allow_insecure_connections = false
+    target_port                = 8000
+    transport                  = "auto"
+
+    traffic_weight {
+      latest_revision = true
+      percentage      = 100
+    }
+  }
+
+  template {
+    min_replicas = 1
+    max_replicas = 1
+
+    container {
+      name   = "mcp-service"
+      image  = local.container_image
+      cpu    = 0.5
+      memory = "1Gi"
+
+      env {
+        name  = "AUTH_MODE"
+        value = "entra"
+      }
+
+      env {
+        name  = "MCP_ALLOWED_HOSTS"
+        value = local.entra_application_fqdn
+      }
+
+      env {
+        name  = "ENTRA_TENANT_ID"
+        value = var.entra_tenant_id
+      }
+
+      env {
+        name  = "ENTRA_AUDIENCE"
+        value = var.entra_api_audience
+      }
+
+      env {
+        name  = "ENTRA_REQUIRED_SCOPE"
+        value = local.entra_required_scope
+      }
+
+      env {
+        name  = "MCP_RESOURCE_SERVER_URL"
+        value = "https://${local.entra_application_fqdn}/mcp"
+      }
+
+      env {
+        name  = "ENTRA_OID_ACCESS_JSON"
+        value = jsonencode(var.entra_oid_access)
       }
 
       startup_probe {
