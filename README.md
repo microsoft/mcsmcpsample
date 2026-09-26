@@ -75,15 +75,95 @@ For more information, see [Assign security roles](https://learn.microsoft.com/po
 
 #### OAuth Deployment Boundary
 
-Automation owns the Microsoft Entra registrations and scopes, non-secret connector and agent artifacts, solution packaging and import, connection-reference deployment settings, and provisioning checks. After a connector exposes its environment-specific callback URI, add that URI through the Terraform-owned Entra configuration rather than changing only the portal registration.
+Terraform continues to own the Microsoft Entra registrations, scopes, and callback URI registrations. For the current demonstration, create the agents, connectors, delegated connections, and consent manually in the target Power Platform environment. The source-controlled agent and solution artifacts remain available as golden references.
 
 An operator must create each target-environment connector connection, enter or rotate its client secret through the supported connector security interface, complete Microsoft Entra sign-in and consent, and provide the resulting connection ID for an untracked deployment settings file. Connections, credentials, tokens, and consent do not travel in solutions. `pac connection create` is not suitable because it creates an application-authenticated Dataverse connection rather than the delegated OAuth connection used by the MCP connector.
 
-The deployment workflow must pause before import until callback registration and target connection creation are complete. If an imported agent requests authentication repair or consent, complete that action in Copilot Studio or Power Apps and resume at verification. Publishing remains disabled unless the target environment is licensed and `MCMC_ALLOW_PUBLISH=true` is set explicitly.
+Publishing remains disabled unless the target environment is licensed. Validate the current demonstration in Copilot Studio Preview.
 
-#### Configure a Copilot Studio MCP Connection
+#### Deferred Scripted Agent Deployment
 
-Use this procedure for any agent that connects to an OAuth-protected Streamable HTTP MCP server. The agent must use generative orchestration, and each isolated agent variant should have only its designated MCP server connection.
+The scripted import workflow is retained for future development but is on hold for the current demonstration. Use the manual recreation procedure below instead. The following commands document the implemented experimental workflow and its validation history; they are not the current deployment runbook.
+
+Run `msft-mcmc-mcs/deploy.sh` from the repository root with Power Platform CLI 2.12.2 or later, Python 3, an authenticated PAC profile, and a Dataverse-enabled target. The target must already contain the `MCMC` publisher with prefix `mcmc`. PAC does not identify Office AI-managed environments in its listings, so set `MCMC_OFFICE_AI_MANAGED=false` only after confirming the target supports custom connectors.
+
+Set the shared non-secret inputs without placing connector secrets on the command line:
+
+```bash
+set -a
+source .env
+set +a
+
+export MCMC_PAC_PROFILE=mcmc
+export MCMC_POWER_PLATFORM_ENVIRONMENT=https://<target-environment>.crm.dynamics.com/
+export MCMC_PUBLISHER_UNIQUE_NAME=MCMC
+export MCMC_PUBLISHER_PREFIX=mcmc
+export MCMC_SOLUTION_VERSION=1.0.0.0
+export MCMC_MCP_HOST=<apim-hostname>
+export MCMC_ALLOW_PUBLISH=false
+export MCMC_OFFICE_AI_MANAGED=false
+```
+
+Select the variant's connector client ID and define its stable matrix arguments. Bootstrap imports the solution, verifies its logical graph, writes an ignored settings template under `.artifacts/mcmc003/`, and exits with status `3` to signal required operator action:
+
+```bash
+export MCMC_ENTRA_CONNECTOR_CLIENT_ID="$MCMC_PUBLIC_NATIVE_CONNECTOR_CLIENT_ID"
+native_args=(
+	--variant public-native
+	--agent-display-name "MCMC Public Native"
+	--agent-schema-name mcmc_PublicNative
+	--mcp-url "https://${MCMC_MCP_HOST}/native/mcp"
+	--ingress-type public
+	--oauth-enforcement-type native
+)
+msft-mcmc-mcs/deploy.sh --stage bootstrap "${native_args[@]}"
+```
+
+After bootstrap, copy the generated callback URI from the connector, add it to the Terraform-owned `entra_mcp_connector_redirect_uris` entry, review and apply the Foundation plan, and enter the current connector client secret only through Power Apps or Copilot Studio. Create the delegated OAuth connection and complete consent. In the generated settings file, set `ConnectionId` to that connection and `ConnectorId` to the target-generated connector resource ID; neither value is a credential, but the file remains untracked because both are environment-specific.
+
+Resume binding only after those actions are complete:
+
+```bash
+export MCMC_CALLBACK_URI_REGISTERED=true
+export MCMC_CONNECTOR_SECRET_CONFIGURED=true
+export MCMC_CONNECTION_AUTHORIZED=true
+msft-mcmc-mcs/deploy.sh --stage bind "${native_args[@]}"
+```
+
+The bind stage reimports with `--settings-file`, verifies the graph, and exits with status `3`. Because connector secrets are not transported by solutions, re-enter the current client secret after this final import. Create or repair the delegated connection, select it for the imported MCP tool, validate the connection in Copilot Studio, and finish without rebuilding the package:
+
+```bash
+export MCMC_AUTHENTICATION_REPAIRED=true
+msft-mcmc-mcs/deploy.sh --stage verify "${native_args[@]}"
+```
+
+Use the corresponding Public Gateway values and `/gateway/mcp` route for the gateway variant. The script rejects matrix mismatches, malformed inputs, Office AI-managed targets, duplicate bootstrap attempts, missing resume targets, partial solution/agent state, secret-like deployment-settings keys, and an unexpected imported graph. `PermissionBlockedByOfficeAI` requires a different target environment. PAC 2.12.2 `copilot status` is not used because it fails on the imported component schema; verification uses supported solution and Dataverse reads. With the current trial, leave publishing disabled and validate in Preview.
+
+For teardown of a disposable test target, remove each solution by unique name. Unmanaged solution deletion can leave the agent record behind, so remove any remaining agent by schema name:
+
+```bash
+pac solution delete --environment "$MCMC_POWER_PLATFORM_ENVIRONMENT" --solution-name MCMCPublicNativeAgent
+pac solution delete --environment "$MCMC_POWER_PLATFORM_ENVIRONMENT" --solution-name MCMCPublicGatewayAgent
+pac copilot delete --environment "$MCMC_POWER_PLATFORM_ENVIRONMENT" --bot mcmc_PublicNative --confirm
+pac copilot delete --environment "$MCMC_POWER_PLATFORM_ENVIRONMENT" --bot mcmc_PublicGateway --confirm
+rm -rf .artifacts/mcmc003
+```
+
+Unmanaged solution deletion can also leave custom connectors behind. In Power Apps, select the target environment, open **More** > **Discover all** > **Custom connectors**, and delete the two MCMC connectors if they remain. Then open **Connections** and delete the obsolete delegated connections as the user who owns them; a managed-identity PAC profile cannot delete user-owned connections. Confirm that the solutions, agents, custom connectors, and connections are absent before recreating the agents.
+
+#### Manually Recreate the Copilot Studio Agents
+
+In the target Dataverse-enabled environment, create two agents named `MCMC Public Native` and `MCMC Public Gateway`. Enable generative orchestration and give each agent these instructions:
+
+```text
+You are the MCMC customer demonstration agent. Use the connected MCP tools as the only source of customer data.
+
+Use list_customers when the user asks to list, show, count, or summarize the customers they can access. Use get_customer when the user supplies a customer ID or asks for one specific customer.
+
+Return only customer data provided by the selected tool. Never invent customers, identifiers, attributes, permissions, or tool results. If a tool rejects the request, returns an error, or is unavailable, state that the customer data could not be retrieved and do not fabricate an answer.
+```
+
+Add exactly one OAuth-protected Streamable HTTP MCP server to each agent. Use **Tools** > **Add a tool** > **New tool** > **Model Context Protocol** with:
 
 In **`<agent-display-name>`**, use **Tools** > **Add a tool** > **New tool** > **Model Context Protocol** with:
 
@@ -100,14 +180,15 @@ In **`<agent-display-name>`**, use **Tools** > **Add a tool** > **New tool** > *
 
 Configure and validate the connection:
 
-1. Open the target agent in Copilot Studio and confirm that generative orchestration is enabled.
-2. Open **Tools**, add an MCP tool, and create a new connection using the values above.
+1. Confirm that the agent name, instructions, and generative orchestration setting match the values above.
+2. Add the agent's single MCP tool and create a new connection using the values above.
 3. Enter the client secret directly in Copilot Studio. Never place it in source control, deployment settings, command-line arguments, or documentation.
 4. Save the connector definition and copy the generated callback URI. The URI is specific to the connector and target Power Platform environment.
 5. Add the callback URI to the matching entry in `entra_mcp_connector_redirect_uris`, run a Terraform plan, verify that only the intended application registration changes, and apply it.
 6. Return to Copilot Studio, create or repair the connection, and complete Microsoft Entra sign-in and delegated consent.
 7. Confirm that the expected MCP tools are discovered, enable the MCP server master switch, and save the agent.
-8. Invoke the tools in Copilot Studio Preview and verify that requests use only the agent variant's designated endpoint.
+8. In Preview, ask `List all customers.` and `Get customer CUST-1001.` Verify that requests use only the agent variant's designated endpoint.
+9. Verify Native returns only records authorized for the signed-in user. Verify Gateway returns all four demonstration customers for James, Jane, and the deployment administrator, while Bill receives `403 Forbidden`.
 
 For the current public MCMC variants, use the following Terraform outputs and local secret variables:
 
@@ -234,4 +315,4 @@ Successful runs print structured JSON containing the selected display name, the 
 
 ## Immediate Next Step
 
-Use the two public OAuth routes to configure and validate the `MCMC003` Copilot Studio agent. The disposable environment remains live for that handoff; when testing is complete, destroy resources in application-then-foundation order and remove local secret-bearing state using the documented procedure.
+Delete the two obsolete delegated connector connections from the `MCMC Import Test` environment in Power Apps, then manually recreate and validate the two agents in Copilot Studio Preview using the procedure above. The imported solutions, agents, custom connectors, connection references, and generated local deployment settings have already been removed; the development golden agents and Azure infrastructure remain intact.

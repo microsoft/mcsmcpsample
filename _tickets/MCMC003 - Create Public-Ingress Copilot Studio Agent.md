@@ -34,6 +34,12 @@ Treat OAuth connections, callback URI registration, user consent, and imported-a
 
 Exercise each public-ingress agent independently from Copilot Studio Preview and correlate its requests through APIM to the corresponding private MCP deployment.
 
+## Current Demo Decision
+
+Automated agent deployment is deferred after clean-environment testing showed that connector secrets and delegated connections still require repeated portal repair. Retain the Phase 4 implementation and evidence for future work, but use manual agent and MCP connector creation for the current demonstration.
+
+On 2026-09-26, the `MCMC Import Test` solutions, agents, custom connectors, connection references, and generated deployment settings were removed. The development golden agents, source-controlled artifacts, Microsoft Entra registrations, and Azure infrastructure were preserved. The two user-owned delegated connector connections remain for their owner to delete through Power Apps.
+
 ## Naming and Matrix Contract
 
 Use one solution per agent so each authentication boundary can be packaged, imported, and validated independently. Persist the complete component schema names below; scripts must not prepend the publisher prefix a second time.
@@ -122,6 +128,17 @@ On a first deployment, the workflow must import the solution before the target-g
 - The Microsoft 365 environment is managed by Office AI and cannot host this deployment. Both solution import and direct connector creation failed with `PermissionBlockedByOfficeAI` for `Create Custom Connector`, despite the user having valid licenses and Global connector privileges. A normal Dataverse-enabled Sandbox is required.
 - `pac copilot status` in CLI 2.12.2 fails against these agents because of a `componentstate_Property` schema incompatibility. Deployment verification must use supported solution and Dataverse reads until that CLI defect is resolved.
 
+## Phase 4 and Phase 5 Execution Evidence
+
+- `msft-mcmc-mcs/deploy.sh` implements the validated matrix, temporary rendering, unmanaged packaging and import, supported graph verification, staged operator handoffs, publication gate, Office AI rejection, and rerun-state checks. Nine focused mock-PAC tests cover valid deployment, invalid inputs, partial state, target-generated connector IDs, operator confirmation, and publish gating.
+- On 2026-09-26, the `MCMC Import Test` Sandbox was reset to contain neither solution nor agent records. Scripted `bootstrap` then imported both Public Native and Public Gateway from the tracked templates and verified one connector, one connection reference, one agent, 15 bot components, and one bot-to-connection-reference association for each variant.
+- Both bootstraps generated ignored settings templates under `.artifacts/mcmc003/` and stopped with the documented operator-action status. The target connector references are not yet bound to delegated connections.
+- The clean-Sandbox connector callback URIs were discovered from supported Dataverse reads, added to the Terraform-owned registrations, and applied with a reviewed `0 add, 2 change, 0 destroy` plan. A subsequent Foundation plan reported no changes.
+- The operator configured both connector secrets, completed delegated connection consent, and selected the target connections. Both ignored settings files were populated from supported Dataverse reads, and both `bind` stages reimported successfully with `--settings-file` before verifying the complete graphs.
+- Live repair proved that the final solution import does not preserve the secure connector secret. Each variant therefore requires secret re-entry and connection repair after `bind`; the Gateway repair used a newly appended credential that was validated directly against Entra without exposing its value.
+- Both `verify` stages passed with publishing disabled and reported the required Copilot Studio Preview path. Both target connection references remained populated after import. Preview invocation and correlation validation remain the final portal-triggered checks.
+- Automated deployment is now deferred for the demo. The clean-Sandbox deployment artifacts were torn down on 2026-09-26, and manual recreation is the active path for completing the remaining Preview checks.
+
 # Definition of Done
 
 - Separate MCMC Public Native and MCMC Public Gateway agents exist in the Dataverse-enabled Power Platform environment.
@@ -165,15 +182,16 @@ On a first deployment, the workflow must import the solution before the target-g
 
 ## Phase 4 - Implement Shell-Based Deployment
 
-- [ ] Implement a matrix-driven shell script that validates prerequisites and one agent variant's display name, schema name, MCP URL, ingress type, OAuth enforcement type, and environment inputs before making changes.
-- [ ] Render portable connector settings into a temporary solution tree, orchestrate `pac solution pack` and `pac solution import`, and verify each imported logical component graph through supported solution and Dataverse interfaces.
-- [ ] Add safe first-import and pause-and-resume behavior with actionable instructions for callback URI registration, connector secret entry, OAuth connection creation, consent, connection-reference binding, or authentication repair.
-- [ ] Invoke `pac copilot publish` only when publishing is supported by the target environment and otherwise report the Preview-only validation path.
-- [ ] Make reruns safe by rejecting Office AI-managed targets, detecting existing solutions and agents by stable schema name, and failing clearly on incompatible state.
+- [x] Implement a matrix-driven shell script that validates prerequisites and one agent variant's display name, schema name, MCP URL, ingress type, OAuth enforcement type, and environment inputs before making changes.
+- [x] Render portable connector settings into a temporary solution tree, orchestrate `pac solution pack` and `pac solution import`, and verify each imported logical component graph through supported solution and Dataverse interfaces.
+- [x] Add safe first-import and pause-and-resume behavior with actionable instructions for callback URI registration, connector secret entry, OAuth connection creation, consent, connection-reference binding, or authentication repair.
+- [x] Invoke `pac copilot publish` only when publishing is supported by the target environment and otherwise report the Preview-only validation path.
+- [x] Make reruns safe by rejecting Office AI-managed targets, detecting existing solutions and agents by stable schema name, and failing clearly on incompatible state.
 
 ## Phase 5 - Validate and Document the Public-Ingress Agents
 
-- [ ] Run the script for both public matrix entries against a clean environment and record the automated and manual portions of each deployment.
+- [x] Run the script for both public matrix entries against a clean environment and record the automated and manual portions of each deployment.
+- [x] Tear down the clean-environment solutions, agents, connectors, connection references, and generated deployment settings after deferring automated deployment.
 - [ ] Exercise each agent's authentication pattern for successful and rejected requests and verify predictable tool selection and error handling.
 - [ ] Correlate each agent's requests through APIM to the correct private MCP deployment and confirm neither backend is publicly reachable.
-- [ ] Document prerequisites, script inputs, authentication, secret handling, deployment, reruns, troubleshooting, teardown, and the current trial publishing limitation.
+- [x] Document manual recreation, deferred automation, authentication, secret handling, teardown, and the current trial publishing limitation.
