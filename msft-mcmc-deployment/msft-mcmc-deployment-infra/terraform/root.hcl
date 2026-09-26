@@ -7,7 +7,7 @@ locals {
   common_tags = {
     disposable = "true"
     managed_by = "terraform"
-    purpose    = "mcmc-copilot-studio-smoke-test"
+    purpose    = "mcmc-copilot-studio-demo"
     ticket     = "MCMC001"
   }
 }

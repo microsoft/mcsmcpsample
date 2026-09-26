@@ -51,6 +51,6 @@ Generated initial passwords are limited to first interactive sign-in. They remai
 
 ## Validated State
 
-Copilot Studio Preview discovered and invoked both MCP tools through the former APIM smoke route. The deployed native route passed the James, Jane, and Bill access matrix, while the APIM-validation route admitted all three valid scoped tokens and returned the trusted app's four fictitious records. Both apps run the same immutable image digest, health probes pass, direct cross-backend access returns `403`, public backend DNS resolution fails, and tagged requests correlate through sanitized APIM and Container App telemetry.
+Copilot Studio Preview discovered and invoked both MCP tools through the former APIM subscription-key route. The deployed native route passed the James, Jane, and Bill access matrix, while the gateway route admitted all three valid scoped tokens and returned the gateway app's four fictitious records. Both apps run the same immutable image digest, health probes pass, direct cross-backend access returns `403`, public backend DNS resolution fails, and tagged requests correlate through sanitized APIM and Container App telemetry.
 
 See [MCP](msft-mcmc-mcp/MCP.md) for service and CLI behavior, [Deployment](msft-mcmc-deployment/Deployment.md) for infrastructure lifecycle procedures, [Vision](Vision.md) for the long-term architecture, and the active tickets for planned changes.

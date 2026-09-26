@@ -1,15 +1,15 @@
 locals {
-  container_image         = "${var.container_registry_login_server}/${var.container_image_repository}@${var.container_image_digest}"
-  application_fqdn        = "${var.container_app_name}.${var.container_app_environment_default_domain}"
-  entra_application_fqdn  = "${var.entra_container_app_name}.${var.container_app_environment_default_domain}"
-  entra_required_scope    = element(reverse(split("/", var.entra_delegated_scope)), 0)
-  gateway_url             = trimsuffix(var.api_management_gateway_url, "/")
-  native_mcp_url          = "${local.gateway_url}/native/mcp"
-  gateway_mcp_url         = "${local.gateway_url}/gateway/mcp"
-  entra_issuer            = "https://login.microsoftonline.com/${var.entra_tenant_id}/v2.0"
-  openid_configuration    = "${local.entra_issuer}/.well-known/openid-configuration"
-  correlation_id          = "@(System.Text.RegularExpressions.Regex.IsMatch(context.Request.Headers.GetValueOrDefault(\"x-correlation-id\", \"\"), \"^[A-Za-z0-9._-]{1,128}$\") ? context.Request.Headers.GetValueOrDefault(\"x-correlation-id\", \"\") : context.RequestId.ToString())"
-  response_correlation_id = "@(context.Request.Headers.GetValueOrDefault(\"x-correlation-id\", context.RequestId.ToString()))"
+  container_image          = "${var.container_registry_login_server}/${var.container_image_repository}@${var.container_image_digest}"
+  gateway_application_fqdn = "${var.gateway_container_app_name}.${var.container_app_environment_default_domain}"
+  native_application_fqdn  = "${var.native_container_app_name}.${var.container_app_environment_default_domain}"
+  entra_required_scope     = element(reverse(split("/", var.entra_delegated_scope)), 0)
+  gateway_url              = trimsuffix(var.api_management_gateway_url, "/")
+  native_mcp_url           = "${local.gateway_url}/native/mcp"
+  gateway_mcp_url          = "${local.gateway_url}/gateway/mcp"
+  entra_issuer             = "https://login.microsoftonline.com/${var.entra_tenant_id}/v2.0"
+  openid_configuration     = "${local.entra_issuer}/.well-known/openid-configuration"
+  correlation_id           = "@(System.Text.RegularExpressions.Regex.IsMatch(context.Request.Headers.GetValueOrDefault(\"x-correlation-id\", \"\"), \"^[A-Za-z0-9._-]{1,128}$\") ? context.Request.Headers.GetValueOrDefault(\"x-correlation-id\", \"\") : context.RequestId.ToString())"
+  response_correlation_id  = "@(context.Request.Headers.GetValueOrDefault(\"x-correlation-id\", context.RequestId.ToString()))"
   api_operations = {
     mcp_get = {
       display_name = "Open MCP stream"
@@ -62,8 +62,8 @@ locals {
   XML
 }
 
-resource "azurerm_user_assigned_identity" "application" {
-  name                = "${var.container_app_name}-identity"
+resource "azurerm_user_assigned_identity" "apps_identity" {
+  name                = var.apps_identity_name
   resource_group_name = var.resource_group_name
   location            = var.location
   tags                = var.tags
@@ -72,11 +72,11 @@ resource "azurerm_user_assigned_identity" "application" {
 resource "azurerm_role_assignment" "image_pull" {
   scope                = var.container_registry_id
   role_definition_name = "AcrPull"
-  principal_id         = azurerm_user_assigned_identity.application.principal_id
+  principal_id         = azurerm_user_assigned_identity.apps_identity.principal_id
 }
 
-resource "azurerm_container_app" "trusted" {
-  name                         = var.container_app_name
+resource "azurerm_container_app" "gateway" {
+  name                         = var.gateway_container_app_name
   container_app_environment_id = var.container_app_environment_id
   resource_group_name          = var.resource_group_name
   revision_mode                = "Single"
@@ -85,12 +85,12 @@ resource "azurerm_container_app" "trusted" {
 
   identity {
     type         = "UserAssigned"
-    identity_ids = [azurerm_user_assigned_identity.application.id]
+    identity_ids = [azurerm_user_assigned_identity.apps_identity.id]
   }
 
   registry {
     server   = var.container_registry_login_server
-    identity = azurerm_user_assigned_identity.application.id
+    identity = azurerm_user_assigned_identity.apps_identity.id
   }
 
   ingress {
@@ -129,7 +129,7 @@ resource "azurerm_container_app" "trusted" {
 
       env {
         name  = "MCP_ALLOWED_HOSTS"
-        value = local.application_fqdn
+        value = local.gateway_application_fqdn
       }
 
       startup_probe {
@@ -167,8 +167,8 @@ resource "azurerm_container_app" "trusted" {
   depends_on = [azurerm_role_assignment.image_pull]
 }
 
-resource "azurerm_container_app" "entra" {
-  name                         = var.entra_container_app_name
+resource "azurerm_container_app" "native" {
+  name                         = var.native_container_app_name
   container_app_environment_id = var.container_app_environment_id
   resource_group_name          = var.resource_group_name
   revision_mode                = "Single"
@@ -177,12 +177,12 @@ resource "azurerm_container_app" "entra" {
 
   identity {
     type         = "UserAssigned"
-    identity_ids = [azurerm_user_assigned_identity.application.id]
+    identity_ids = [azurerm_user_assigned_identity.apps_identity.id]
   }
 
   registry {
     server   = var.container_registry_login_server
-    identity = azurerm_user_assigned_identity.application.id
+    identity = azurerm_user_assigned_identity.apps_identity.id
   }
 
   ingress {
@@ -221,7 +221,7 @@ resource "azurerm_container_app" "entra" {
 
       env {
         name  = "MCP_ALLOWED_HOSTS"
-        value = local.entra_application_fqdn
+        value = local.native_application_fqdn
       }
 
       env {
@@ -289,12 +289,12 @@ resource "azurerm_api_management_api" "mcp" {
     native = {
       display_name = "MCMC Native OAuth MCP"
       path         = "native"
-      service_url  = "https://${azurerm_container_app.entra.ingress[0].fqdn}"
+      service_url  = "https://${azurerm_container_app.native.ingress[0].fqdn}"
     }
     gateway = {
-      display_name = "MCMC APIM OAuth MCP"
+      display_name = "MCMC Gateway OAuth MCP"
       path         = "gateway"
-      service_url  = "https://${azurerm_container_app.trusted.ingress[0].fqdn}"
+      service_url  = "https://${azurerm_container_app.gateway.ingress[0].fqdn}"
     }
   }
 

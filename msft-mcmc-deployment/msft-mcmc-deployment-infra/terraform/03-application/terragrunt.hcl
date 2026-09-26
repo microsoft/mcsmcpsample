@@ -12,7 +12,7 @@ remote_state {
   backend = "local"
 
   config = {
-    path = "${get_repo_root()}/.terraform-state/smoke-application.terraform.tfstate"
+    path = "${get_repo_root()}/.terraform-state/application.terraform.tfstate"
   }
 
   generate = {
@@ -31,8 +31,9 @@ inputs = {
   container_registry_login_server          = dependency.foundation.outputs.container_registry_login_server
   container_image_repository               = local.image_manifest.repository
   container_image_digest                   = local.image_manifest.digest
-  container_app_name                       = "mcmc-mcp-trusted"
-  entra_container_app_name                 = "mcmc-mcp-entra"
+  gateway_container_app_name               = "mcmc-mcp-gateway"
+  native_container_app_name                = "mcmc-mcp-native"
+  apps_identity_name                       = "mcmc-mcp-apps-identity"
   entra_tenant_id                          = dependency.foundation.outputs.entra_tenant_id
   entra_api_audience                       = dependency.foundation.outputs.entra_mcp_api_audience
   entra_delegated_scope                    = dependency.foundation.outputs.entra_mcp_delegated_scope

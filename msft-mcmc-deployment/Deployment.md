@@ -7,13 +7,13 @@ The module coordinate is `msft-mcmc-deployment`. Its `msft-mcmc-deployment-infra
 ## Structure
 
 - `msft-mcmc-deployment-infra/terraform/root.hcl` defines shared Azure context, deterministic names, and tags.
-- `msft-mcmc-deployment-infra/terraform/01-foundation/` contains the foundation Terraform and Terragrunt configuration, stores state in `.terraform-state/smoke-foundation.terraform.tfstate`, and owns the resource group, ACR, virtual network, delegated subnets, Log Analytics workspace, private Container Apps environment, private DNS, Standard v2 API Management service, and shared Microsoft Entra identities.
+- `msft-mcmc-deployment-infra/terraform/01-foundation/` contains the foundation Terraform and Terragrunt configuration, stores state in `.terraform-state/foundation.terraform.tfstate`, and owns the resource group, ACR, virtual network, delegated subnets, Log Analytics workspace, private Container Apps environment, private DNS, Standard v2 API Management service, and shared Microsoft Entra identities.
 - `msft-mcmc-deployment-infra/terraform/02-container/buildandpush.sh` builds and pushes an immutable MCP service image through ACR Build and writes the gitignored `image.json` handoff manifest after a successful push.
-- `msft-mcmc-deployment-infra/terraform/03-application/` contains the application Terraform and Terragrunt configuration, stores state in `.terraform-state/smoke-application.terraform.tfstate`, and owns both Container Apps, their shared user-assigned identity and `AcrPull` assignment, and the governed API Management APIs and policies.
+- `msft-mcmc-deployment-infra/terraform/03-application/` contains the application Terraform and Terragrunt configuration, stores state in `.terraform-state/application.terraform.tfstate`, and models the two Container Apps as the `gateway` and `native` deployment roles. It owns both apps, their shared `apps_identity` user-assigned identity and `AcrPull` assignment, and the governed API Management APIs and policies.
 
 ## Environment
 
-The smoke environment targets Sweden Central. Operators provide the target account context through `ARM_SUBSCRIPTION_ID` and `ARM_TENANT_ID`; neither value is stored in source control. Names use the first eight characters of the subscription identifier to avoid global collisions. All user-managed foundation resources are created in `mcmc-deployment-rg`.
+The demonstration environment targets Sweden Central. Operators provide the target account context through `ARM_SUBSCRIPTION_ID` and `ARM_TENANT_ID`; neither value is stored in source control. Names use the first eight characters of the subscription identifier to avoid global collisions. The shared Log Analytics workspace is named `mcmc-<subscription-prefix>-logs`, the private Container Apps environment is named `mcmc-container-apps`, and all user-managed foundation resources are created in `mcmc-deployment-rg`. Deployment resources use the `mcmc-copilot-studio-demo` purpose tag.
 
 The foundation owns the `MCMC MCP API` and `MCMC MCP CLI` Entra registrations and their service principals. The API exposes the user-consentable `access_as_user` delegated scope under the `api://example.onmicrosoft.com/mcmc-mcp` identifier URI. Entra v2 access tokens use the API client ID as the `aud` claim, while native clients request the fully qualified URI-based scope. The CLI is a nonsecret native public client configured for device-code authentication and declares the delegated API permission. Terraform creates neither application secrets nor an administrator consent grant; each demonstration user consents interactively when tenant policy permits.
 
@@ -27,7 +27,7 @@ API Management service `mcmc-<subscription-prefix>-apim` uses the Standard v2 SK
 
 The foundation ACR uses the Basic SKU with administrator credentials disabled. Public registry access remains enabled so authenticated developers can push images from the development environment using Microsoft Entra ID. Container Apps must pull images through managed identity and `AcrPull` role assignment in the application layer.
 
-Layer 3 deploys `mcmc-mcp-trusted` and `mcmc-mcp-entra` from the same exact Layer 2 image digest with one replica each, internal environment ingress on port `8000`, and `/health` startup, readiness, and liveness probes. Each app permits ingress only from the delegated APIM subnet. The trusted app uses `AUTH_MODE=trusted`. The Entra app uses `AUTH_MODE=entra`, validates v2 tokens against the Foundation tenant and API client-ID audience, requires the `access_as_user` delegated scope, and authorizes immutable object identifiers through the Foundation access policy. Both stable FQDNs use the private Container Apps environment domain and do not resolve through public DNS.
+Layer 3 deploys `mcmc-mcp-gateway` and `mcmc-mcp-native` from the same exact Layer 2 image digest with one replica each, internal environment ingress on port `8000`, and `/health` startup, readiness, and liveness probes. Both apps share the `mcmc-mcp-apps-identity` user-assigned identity for image pulls. Each app permits ingress only from the delegated APIM subnet. The gateway app uses `AUTH_MODE=trusted`. The native app uses `AUTH_MODE=entra`, validates v2 tokens against the Foundation tenant and API client-ID audience, requires the `access_as_user` delegated scope, and authorizes immutable object identifiers through the Foundation access policy. Both stable FQDNs use the private Container Apps environment domain and do not resolve through public DNS.
 
 Both public APIM routes were validated with independent device-code sessions for James, Jane, and Bill. The native route returned only James's two assigned customers, only Jane's two assigned customers, and an empty list for Bill. The gateway route accepted each valid tenant, audience, and scope token, removed the bearer header, and returned all four fictitious customers from the intentionally unfiltered trusted service.
 
@@ -39,7 +39,7 @@ Terraform authenticates through the current Azure CLI session. Terragrunt stores
 
 ## Security Boundary
 
-APIM is the only application ingress path to both Container Apps. Container App IP restrictions allow `10.58.0.0/27`, the delegated APIM integration subnet, and deny other sources; a live request from one backend to the other returned `403`. The native route preserves the bearer token for validation and per-`oid` authorization by `mcmc-mcp-entra`. The gateway route validates the bearer token and delegated scope at APIM, removes the header, and invokes `mcmc-mcp-trusted`, which deliberately returns the complete fictitious catalog. Private DNS and the internal Container Apps environment prevent direct public backend resolution.
+APIM is the only application ingress path to both Container Apps. Container App IP restrictions allow `10.58.0.0/27`, the delegated APIM integration subnet, and deny other sources; a live request from one backend to the other returned `403`. The native route preserves the bearer token for validation and per-`oid` authorization by `mcmc-mcp-native`. The gateway route validates the bearer token and delegated scope at APIM, removes the header, and invokes `mcmc-mcp-gateway`, which deliberately returns the complete fictitious catalog. Private DNS and the internal Container Apps environment prevent direct public backend resolution.
 
 ## Configuration
 
@@ -89,7 +89,7 @@ cd -
 Inspect both app revisions and confirm the immutable images match:
 
 ```bash
-for app in mcmc-mcp-trusted mcmc-mcp-entra; do
+for app in mcmc-mcp-gateway mcmc-mcp-native; do
 	az containerapp show \
 		--resource-group mcmc-deployment-rg \
 		--name "$app" \
@@ -103,7 +103,7 @@ Inspect sanitized application logs without enabling request or response body log
 ```bash
 az containerapp logs show \
 	--resource-group mcmc-deployment-rg \
-	--name mcmc-mcp-entra \
+	--name mcmc-mcp-native \
 	--tail 50 \
 	--format text
 ```
@@ -200,8 +200,8 @@ test ! -e .env
 Only after Azure and Entra teardown verification succeeds, delete the local state files and backups that contained generated passwords, plus the generated image manifest:
 
 ```bash
-rm -f .terraform-state/smoke-application.terraform.tfstate*
-rm -f .terraform-state/smoke-foundation.terraform.tfstate*
+rm -f .terraform-state/application.terraform.tfstate*
+rm -f .terraform-state/foundation.terraform.tfstate*
 rm -f msft-mcmc-deployment/msft-mcmc-deployment-infra/terraform/02-container/image.json
 unset api_client_id cli_client_id demo_upns
 ```

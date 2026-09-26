@@ -1,36 +1,36 @@
-output "container_app_id" {
-  description = "Resource identifier of the trusted-mode Container App."
-  value       = azurerm_container_app.trusted.id
+output "gateway_container_app_id" {
+  description = "Resource identifier of the gateway Container App running in trusted mode."
+  value       = azurerm_container_app.gateway.id
 }
 
-output "container_app_name" {
-  description = "Name of the trusted-mode Container App."
-  value       = azurerm_container_app.trusted.name
+output "gateway_container_app_name" {
+  description = "Name of the gateway Container App running in trusted mode."
+  value       = azurerm_container_app.gateway.name
 }
 
-output "container_app_fqdn" {
-  description = "Private FQDN of the trusted-mode Container App."
-  value       = azurerm_container_app.trusted.ingress[0].fqdn
+output "gateway_container_app_fqdn" {
+  description = "Private FQDN of the gateway Container App running in trusted mode."
+  value       = azurerm_container_app.gateway.ingress[0].fqdn
 }
 
-output "entra_container_app_id" {
-  description = "Resource identifier of the Entra-mode Container App."
-  value       = azurerm_container_app.entra.id
+output "native_container_app_id" {
+  description = "Resource identifier of the native Container App running in Entra mode."
+  value       = azurerm_container_app.native.id
 }
 
-output "entra_container_app_name" {
-  description = "Name of the Entra-mode Container App."
-  value       = azurerm_container_app.entra.name
+output "native_container_app_name" {
+  description = "Name of the native Container App running in Entra mode."
+  value       = azurerm_container_app.native.name
 }
 
-output "entra_container_app_fqdn" {
-  description = "Private FQDN of the Entra-mode Container App."
-  value       = azurerm_container_app.entra.ingress[0].fqdn
+output "native_container_app_fqdn" {
+  description = "Private FQDN of the native Container App running in Entra mode."
+  value       = azurerm_container_app.native.ingress[0].fqdn
 }
 
-output "entra_mcp_url" {
-  description = "Private Streamable HTTP endpoint of the Entra-mode Container App."
-  value       = "https://${azurerm_container_app.entra.ingress[0].fqdn}/mcp"
+output "native_mcp_url" {
+  description = "Private Streamable HTTP endpoint of the native Container App."
+  value       = "https://${azurerm_container_app.native.ingress[0].fqdn}/mcp"
 }
 
 output "container_image" {
@@ -38,9 +38,9 @@ output "container_image" {
   value       = local.container_image
 }
 
-output "application_identity_principal_id" {
-  description = "Microsoft Entra principal used by the Container App."
-  value       = azurerm_user_assigned_identity.application.principal_id
+output "apps_identity_principal_id" {
+  description = "Microsoft Entra principal shared by both Container Apps."
+  value       = azurerm_user_assigned_identity.apps_identity.principal_id
 }
 
 output "api_management_native_mcp_url" {

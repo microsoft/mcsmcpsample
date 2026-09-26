@@ -15,8 +15,8 @@ Extend the Standard v2 Azure API Management (APIM) service and private outbound 
 
 Expose separate MCP routes for the two authentication patterns:
 
-- Pass the OAuth bearer token through unchanged to `mcmc-mcp-entra` for native validation and immutable-`oid` authorization.
-- Apply the APIM `validate-jwt` policy before forwarding approved requests to `mcmc-mcp-trusted`, which intentionally performs no native authentication or user filtering.
+- Pass the OAuth bearer token through unchanged to `mcmc-mcp-native` for native validation and immutable-`oid` authorization.
+- Apply the APIM `validate-jwt` policy before forwarding approved requests to `mcmc-mcp-gateway`, which intentionally performs no native authentication or user filtering.
 
 Publish both routes through the existing public APIM gateway for `MCMC003`. Keep route definitions and shared policies reusable by the later private APIM ingress work in `MCMC004`, but do not provision the Power Platform private path in this ticket. APIM must continue reaching both backends over the existing virtual network and private DNS path, and neither backend may be directly reachable from the public internet.
 

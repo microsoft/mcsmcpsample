@@ -48,13 +48,18 @@ variable "container_image_digest" {
   }
 }
 
-variable "container_app_name" {
-  description = "Name of the trusted-mode Container App."
+variable "gateway_container_app_name" {
+  description = "Name of the gateway Container App running in trusted mode."
   type        = string
 }
 
-variable "entra_container_app_name" {
-  description = "Name of the Entra-mode Container App."
+variable "native_container_app_name" {
+  description = "Name of the native Container App running in Entra mode."
+  type        = string
+}
+
+variable "apps_identity_name" {
+  description = "Name of the user-assigned identity shared by both Container Apps."
   type        = string
 }
 

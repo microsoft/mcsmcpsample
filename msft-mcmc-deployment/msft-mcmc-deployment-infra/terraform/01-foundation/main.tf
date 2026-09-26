@@ -25,7 +25,7 @@ resource "azurerm_role_assignment" "image_pusher" {
 }
 
 resource "azurerm_log_analytics_workspace" "deployment" {
-  name                = "mcmc-smoke-677e8052-logs"
+  name                = var.log_analytics_workspace_name
   resource_group_name = azurerm_resource_group.deployment.name
   location            = azurerm_resource_group.deployment.location
   sku                 = "PerGB2018"

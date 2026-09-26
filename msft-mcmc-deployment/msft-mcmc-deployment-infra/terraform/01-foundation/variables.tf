@@ -33,6 +33,11 @@ variable "container_registry_name" {
   type        = string
 }
 
+variable "log_analytics_workspace_name" {
+  description = "Name of the shared Log Analytics workspace."
+  type        = string
+}
+
 variable "container_apps_environment_name" {
   description = "Name of the private Container Apps environment."
   type        = string
