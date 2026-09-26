@@ -340,7 +340,7 @@ resource "azurerm_api_management_api_policy" "mcp" {
         <base />
         ${local.common_inbound_policy}
         ${each.key == "gateway" ? <<-AUTH
-        <validate-jwt header-name="Authorization" require-scheme="Bearer" require-expiration-time="true" require-signed-tokens="true" failed-validation-httpcode="401" failed-validation-error-message="Unauthorized">
+        <validate-jwt header-name="Authorization" require-scheme="Bearer" require-expiration-time="true" require-signed-tokens="true" failed-validation-httpcode="401" failed-validation-error-message="Unauthorized" output-token-variable-name="validatedJwt">
           <openid-config url="${local.openid_configuration}" />
           <audiences>
             <audience>${var.entra_api_audience}</audience>
@@ -353,6 +353,14 @@ resource "azurerm_api_management_api_policy" "mcp" {
             <claim name="scp" match="any" separator=" "><value>${local.entra_required_scope}</value></claim>
           </required-claims>
         </validate-jwt>
+        <choose>
+          <when condition="@(!((Jwt)context.Variables[&quot;validatedJwt&quot;]).Claims.GetValueOrDefault(&quot;groups&quot;, &quot;&quot;).Split(',').Contains(&quot;${var.entra_gateway_authorized_group_id}&quot;))">
+            <return-response>
+              <set-status code="403" reason="Forbidden" />
+              <set-header name="x-correlation-id" exists-action="override"><value>${local.response_correlation_id}</value></set-header>
+            </return-response>
+          </when>
+        </choose>
         <set-header name="Authorization" exists-action="delete" />
         AUTH
 : ""}

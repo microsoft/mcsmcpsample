@@ -78,6 +78,11 @@ variable "entra_delegated_scope" {
   type        = string
 }
 
+variable "entra_gateway_authorized_group_id" {
+  description = "Object identifier of the Microsoft Entra security group authorized to use the gateway MCP route."
+  type        = string
+}
+
 variable "entra_oid_access" {
   description = "Customer access policy keyed by immutable Microsoft Entra object identifier."
   type        = map(list(string))

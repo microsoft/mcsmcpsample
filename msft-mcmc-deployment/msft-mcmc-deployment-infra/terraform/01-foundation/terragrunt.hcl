@@ -20,6 +20,16 @@ inputs = {
   subscription_id                                   = local.root_locals.subscription_id
   tenant_id                                         = local.root_locals.tenant_id
   entra_verified_domain                             = "example.onmicrosoft.com"
+  entra_customer_admin_group_name                   = "mcmc-customer-admins"
+  entra_customer_admin_user_principal_name          = "admin@example.onmicrosoft.com"
+  entra_mcp_connector_redirect_uris                 = {
+    public_native = [
+      "https://global.consent.azure-apim.net/redirect/mcmc-5fmcmc-20public-20native-20mcp-202-5f5e91a8aaf86d61ed",
+    ]
+    public_gateway = [
+      "https://global.consent.azure-apim.net/redirect/mcmc-5fmcmc-20public-20gateway-20mcp-202-5f5e91a8aaf86d61ed",
+    ]
+  }
   local_env_file_path                               = "${get_repo_root()}/.env"
   location                                          = local.root_locals.location
   resource_group_name                               = "mcmc-deployment-rg"

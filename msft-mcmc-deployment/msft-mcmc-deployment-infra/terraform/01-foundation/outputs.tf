@@ -103,6 +103,16 @@ output "entra_mcp_cli_client_id" {
   value       = azuread_application.mcp_cli.client_id
 }
 
+output "entra_mcp_connector_client_ids" {
+  description = "Client identifiers of the confidential Copilot Studio MCP connector registrations."
+  value       = { for name, application in azuread_application.mcp_connector : name => application.client_id }
+}
+
+output "entra_customer_admin_group_id" {
+  description = "Object identifier of the security group authorized to use the gateway MCP route."
+  value       = azuread_group.customer_admins.object_id
+}
+
 output "entra_demo_user_principal_names" {
   description = "User principal names of the disposable demonstration users."
   value       = { for name, user in azuread_user.demo : name => user.user_principal_name }

@@ -1,5 +1,9 @@
 data "azuread_client_config" "current" {}
 
+data "azuread_user" "customer_admin" {
+  user_principal_name = var.entra_customer_admin_user_principal_name
+}
+
 locals {
   demo_users = {
     james = {
@@ -24,16 +28,28 @@ locals {
       customers     = []
     }
   }
+
+  mcp_connector_clients = {
+    public_native = {
+      display_name  = "MCMC Public Native MCP Connector"
+      redirect_uris = lookup(var.entra_mcp_connector_redirect_uris, "public_native", [])
+    }
+    public_gateway = {
+      display_name  = "MCMC Public Gateway MCP Connector"
+      redirect_uris = lookup(var.entra_mcp_connector_redirect_uris, "public_gateway", [])
+    }
+  }
 }
 
 resource "random_uuid" "mcp_access_scope" {}
 
 resource "azuread_application" "mcp_api" {
-  display_name     = "MCMC MCP API"
-  description      = "Delegated API registration for the MCMC demonstration MCP server."
-  sign_in_audience = "AzureADMyOrg"
-  identifier_uris  = ["api://${var.entra_verified_domain}/mcmc-mcp"]
-  owners           = [data.azuread_client_config.current.object_id]
+  display_name            = "MCMC MCP API"
+  description             = "Delegated API registration for the MCMC demonstration MCP server."
+  sign_in_audience        = "AzureADMyOrg"
+  identifier_uris         = ["api://${var.entra_verified_domain}/mcmc-mcp"]
+  group_membership_claims = ["SecurityGroup"]
+  owners                  = [data.azuread_client_config.current.object_id]
 
   api {
     requested_access_token_version = 2
@@ -55,6 +71,18 @@ resource "azuread_service_principal" "mcp_api" {
   client_id                    = azuread_application.mcp_api.client_id
   app_role_assignment_required = false
   owners                       = [data.azuread_client_config.current.object_id]
+}
+
+resource "azuread_group" "customer_admins" {
+  display_name            = var.entra_customer_admin_group_name
+  security_enabled        = true
+  prevent_duplicate_names = true
+  owners                  = [data.azuread_client_config.current.object_id]
+  members = [
+    azuread_user.demo["james"].object_id,
+    azuread_user.demo["jane"].object_id,
+    data.azuread_user.customer_admin.object_id,
+  ]
 }
 
 resource "azuread_application" "mcp_cli" {
@@ -82,6 +110,52 @@ resource "azuread_service_principal" "mcp_cli" {
   client_id                    = azuread_application.mcp_cli.client_id
   app_role_assignment_required = false
   owners                       = [data.azuread_client_config.current.object_id]
+}
+
+resource "azuread_application" "mcp_connector" {
+  for_each = local.mcp_connector_clients
+
+  display_name     = each.value.display_name
+  description      = "Confidential client used by the corresponding Copilot Studio MCP connector."
+  sign_in_audience = "AzureADMyOrg"
+  owners           = [data.azuread_client_config.current.object_id]
+
+  required_resource_access {
+    resource_app_id = azuread_application.mcp_api.client_id
+
+    resource_access {
+      id   = random_uuid.mcp_access_scope.result
+      type = "Scope"
+    }
+  }
+
+  dynamic "web" {
+    for_each = length(each.value.redirect_uris) == 0 ? [] : [each.value.redirect_uris]
+
+    content {
+      redirect_uris = web.value
+    }
+  }
+}
+
+resource "azuread_service_principal" "mcp_connector" {
+  for_each = azuread_application.mcp_connector
+
+  client_id                    = each.value.client_id
+  app_role_assignment_required = false
+  owners                       = [data.azuread_client_config.current.object_id]
+}
+
+resource "azuread_application_password" "mcp_connector" {
+  for_each = azuread_application.mcp_connector
+
+  application_id = each.value.id
+  display_name   = "Copilot Studio connector credential"
+  end_date       = timeadd(timestamp(), "17520h")
+
+  lifecycle {
+    ignore_changes = [end_date]
+  }
 }
 
 resource "random_password" "demo_user" {
@@ -118,6 +192,10 @@ resource "local_sensitive_file" "environment" {
     MCMC_ENTRA_API_AUDIENCE=${azuread_application.mcp_api.client_id}
     MCMC_ENTRA_SCOPE=${one(azuread_application.mcp_api.identifier_uris)}/access_as_user
     MCMC_ENTRA_CLI_CLIENT_ID=${azuread_application.mcp_cli.client_id}
+    MCMC_PUBLIC_NATIVE_CONNECTOR_CLIENT_ID=${azuread_application.mcp_connector["public_native"].client_id}
+    MCMC_PUBLIC_NATIVE_CONNECTOR_CLIENT_SECRET=${jsonencode(azuread_application_password.mcp_connector["public_native"].value)}
+    MCMC_PUBLIC_GATEWAY_CONNECTOR_CLIENT_ID=${azuread_application.mcp_connector["public_gateway"].client_id}
+    MCMC_PUBLIC_GATEWAY_CONNECTOR_CLIENT_SECRET=${jsonencode(azuread_application_password.mcp_connector["public_gateway"].value)}
     MCMC_JAMES_UPN=${azuread_user.demo["james"].user_principal_name}
     MCMC_JAMES_OID=${azuread_user.demo["james"].object_id}
     MCMC_JAMES_INITIAL_PASSWORD=${jsonencode(random_password.demo_user["james"].result)}

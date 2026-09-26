@@ -13,9 +13,31 @@ variable "entra_verified_domain" {
   type        = string
 }
 
+variable "entra_customer_admin_group_name" {
+  description = "Display name of the Microsoft Entra security group authorized to use the gateway MCP route."
+  type        = string
+}
+
+variable "entra_customer_admin_user_principal_name" {
+  description = "User principal name of the deployment administrator included in the gateway authorization group."
+  type        = string
+}
+
 variable "local_env_file_path" {
   description = "Absolute path of the gitignored root environment file containing sensitive demonstration identity data."
   type        = string
+}
+
+variable "entra_mcp_connector_redirect_uris" {
+  description = "Copilot Studio callback URIs keyed by public_native and public_gateway; leave empty until each connector is created."
+  type        = map(set(string))
+
+  validation {
+    condition = (
+      length(setsubtract(toset(keys(var.entra_mcp_connector_redirect_uris)), toset(["public_native", "public_gateway"]))) == 0
+    )
+    error_message = "Connector redirect URI keys must be public_native or public_gateway."
+  }
 }
 
 variable "location" {

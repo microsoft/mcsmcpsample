@@ -9,6 +9,7 @@ The Microsoft Copilot Studio MCP demo proves two authentication patterns for sta
 - The Entra-mode MCP service validates bearer-token signature, issuer, client-ID audience, lifetime, delegated scope, tenant, and immutable user object identifier.
 - James sees two assigned customer records, Jane sees a different two records, and Bill sees none.
 - The trusted-mode MCP service performs no native token validation and returns the complete fictitious catalog because its authentication boundary is external.
+- Separate Copilot Studio Public Native and Public Gateway agents each expose only the MCP connection for their designated authentication boundary.
 - Health probes, structured completion logs, and caller-provided correlation identifiers support operational verification without logging credentials or tool payloads.
 
 ## Architecture
@@ -37,7 +38,7 @@ Both Container Apps run in one internal Azure Container Apps environment with pu
 
 ## Workflows
 
-The next Copilot Studio workflow connects the `MCMC003` test agent to both OAuth-governed APIM MCP endpoints, discovers both tools, and invokes them in Preview. The earlier subscription-key connection was removed after compatibility validation.
+The Public Native and Public Gateway Copilot Studio agents connect independently to their corresponding OAuth-governed APIM MCP endpoints. Each agent contains one MCP connection, discovers both deterministic customer tools through that connection, and is exercised separately in Preview. The earlier subscription-key connection was removed after compatibility validation.
 
 The validation workflow starts the Python CLI for James, Jane, or Bill, completes interactive device-code authentication and consent, verifies that the token's `oid` matches the selected profile, and calls either public APIM route. Tokens and the MSAL cache remain in memory.
 
@@ -51,6 +52,6 @@ Generated initial passwords are limited to first interactive sign-in. They remai
 
 ## Validated State
 
-Copilot Studio Preview discovered and invoked both MCP tools through the former APIM subscription-key route. The deployed native route passed the James, Jane, and Bill access matrix, while the gateway route admitted all three valid scoped tokens and returned the gateway app's four fictitious records. Both apps run the same immutable image digest, health probes pass, direct cross-backend access returns `403`, public backend DNS resolution fails, and tagged requests correlate through sanitized APIM and Container App telemetry.
+Copilot Studio Preview discovered and invoked both MCP tools through each agent's isolated connection. The Public Native agent returned no customers for the deployment administrator under native per-user authorization. The Public Gateway agent returned all four fictitious records for the same administrator through APIM token and `mcmc-customer-admins` group enforcement. The deployable agent solutions also completed a clean Sandbox import and export round trip. The deployed native route passed the James, Jane, and Bill access matrix. Both apps run the same immutable image digest, health probes pass, direct cross-backend access returns `403`, public backend DNS resolution fails, and tagged requests correlate through sanitized APIM and Container App telemetry.
 
-See [MCP](msft-mcmc-mcp/MCP.md) for service and CLI behavior, [Deployment](msft-mcmc-deployment/Deployment.md) for infrastructure lifecycle procedures, [Vision](Vision.md) for the long-term architecture, and the active tickets for planned changes.
+See [Copilot Studio](msft-mcmc-mcs/Copilot%20Studio.md) for agent source and packaging, [MCP](msft-mcmc-mcp/MCP.md) for service and CLI behavior, [Deployment](msft-mcmc-deployment/Deployment.md) for infrastructure lifecycle procedures, [Vision](Vision.md) for the long-term architecture, and the active tickets for planned changes.

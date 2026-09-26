@@ -55,8 +55,12 @@ def main() -> None:
         "validate-jwt",
         'require-scheme="Bearer"',
         'require-expiration-time="true"',
+        'output-token-variable-name="validatedJwt"',
         '<claim name="tid"',
         '<claim name="scp"',
+        'GetValueOrDefault(&quot;groups&quot;',
+        'code="403"',
+        'reason="Forbidden"',
         '<set-header name="Authorization" exists-action="delete"',
     )
     if any(value not in gateway for value in required_gateway):

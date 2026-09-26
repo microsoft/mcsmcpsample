@@ -37,6 +37,7 @@ inputs = {
   entra_tenant_id                          = dependency.foundation.outputs.entra_tenant_id
   entra_api_audience                       = dependency.foundation.outputs.entra_mcp_api_audience
   entra_delegated_scope                    = dependency.foundation.outputs.entra_mcp_delegated_scope
+  entra_gateway_authorized_group_id        = dependency.foundation.outputs.entra_customer_admin_group_id
   entra_oid_access                         = dependency.foundation.outputs.entra_oid_access
   api_management_name                      = dependency.foundation.outputs.api_management_name
   api_management_gateway_url               = dependency.foundation.outputs.api_management_gateway_url
