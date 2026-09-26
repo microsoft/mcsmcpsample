@@ -88,6 +88,11 @@ variable "api_management_gateway_url" {
   type        = string
 }
 
+variable "api_management_subnet_address_prefix" {
+  description = "Address prefix allowed to reach the private MCP backends."
+  type        = string
+}
+
 variable "tags" {
   description = "Tags applied to application resources."
   type        = map(string)

@@ -43,18 +43,20 @@ output "application_identity_principal_id" {
   value       = azurerm_user_assigned_identity.application.principal_id
 }
 
-output "api_management_mcp_url" {
-  description = "Public API Management URL for the trusted MCP endpoint."
-  value       = "${trimsuffix(var.api_management_gateway_url, "/")}/mcp"
+output "api_management_native_mcp_url" {
+  description = "Public APIM MCP URL that passes bearer tokens to the Entra-mode backend."
+  value       = local.native_mcp_url
 }
 
-output "api_management_health_url" {
-  description = "Public API Management URL for the trusted MCP health endpoint."
-  value       = "${trimsuffix(var.api_management_gateway_url, "/")}/health"
+output "api_management_gateway_mcp_url" {
+  description = "Public APIM MCP URL that validates bearer tokens before invoking the trusted backend."
+  value       = local.gateway_mcp_url
 }
 
-output "api_management_subscription_primary_key" {
-  description = "Primary APIM subscription key for the trusted MCP API."
-  value       = azurerm_api_management_subscription.trusted_mcp.primary_key
-  sensitive   = true
+output "api_management_oauth_metadata_urls" {
+  description = "Protected-resource metadata URLs for the governed MCP routes."
+  value = {
+    for route, metadata in local.protected_resource_metadata :
+    route => "${local.gateway_url}/${metadata.path}"
+  }
 }

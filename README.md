@@ -6,12 +6,12 @@ This project demonstrates Microsoft Copilot Studio connecting through Azure API 
 
 The following findings are listed in reverse chronological order.
 
-1. On 2026-09-25, the licensed-tenant `MCP Capability Test` agent connected to the public Standard v2 APIM gateway using an API-scoped subscription key. APIM reached the MCP server through outbound VNet integration, private DNS, and the private Container Apps environment; the backend remained unavailable through public DNS.
-2. Copilot Studio discovered `list_accessible_customers` and `get_accessible_customer` over Streamable HTTP at `/mcp`. The editor displayed `We couldn't load this tool's contract` while still listing and successfully invoking both tools, so that warning did not indicate a blocking protocol incompatibility.
-3. `list_accessible_customers` returned and rendered all four fictitious records with customer number, name, reserved fictional phone number, and `example.com` email address.
-4. `get_accessible_customer` returned the expected `CUST-1002` record. An invalid `CUST-001` lookup returned no customer, after which the agent used the list result to suggest the valid `CUST-1001` through `CUST-1004` range.
-5. The observed Copilot Studio responses and citations exposed no APIM subscription key, access token, credentials, or non-fictitious customer data.
-6. A uniquely tagged `GET /health` request returned `200` through APIM and the same sanitized correlation identifier appeared in the private Container App telemetry, proving propagation across the gateway-to-backend path without recording the identifier value. The temporary MCP tool connection was removed from the Copilot Studio test agent after the smoke test.
+1. On 2026-09-26, Standard v2 APIM exposed separate OAuth-governed Streamable HTTP routes at `/native/mcp` and `/gateway/mcp`, with RFC 9728 protected-resource metadata for each. The temporary subscription-key route was removed after validation.
+2. Independent device-code runs for James, Jane, and Bill discovered and invoked both tools through both routes. Native mode enforced the immutable-`oid` access matrix; gateway mode validated each token at APIM and returned the intentionally unfiltered trusted catalog.
+3. Missing, malformed, and wrong-audience tokens returned `401`. A real request body over 1 MiB returned `413`, and gateway-generated error responses preserved sanitized correlation identifiers.
+4. Both Container Apps allow ingress only from the delegated APIM subnet. A cross-backend request from a Container App replica returned `403`, and neither backend hostname resolves through public DNS.
+5. APIM gateway logs and metrics flow to the existing Log Analytics workspace without request or response bodies. Correlation identifiers join APIM and sanitized backend completion telemetry without exposing authorization headers, tokens, credentials, or customer payloads.
+6. On 2026-09-25, the licensed-tenant `MCP Capability Test` agent proved Copilot Studio compatibility through the former subscription-key smoke route. It discovered and invoked both tools despite displaying `We couldn't load this tool's contract`; that temporary tool connection and route were subsequently removed.
 7. The Copilot Studio trial supports creating, configuring, previewing, and testing agents, but it does not support publishing them. The trial product provides tenant capacity and cannot be assigned to a user or device. Publishing requires an appropriate paid subscription or supported pay-as-you-go arrangement.
 8. Copilot Studio supports MCP servers directly as agent tools. A connection requires a server name, description, and server URL; the interface presents `/mcp` as the expected endpoint pattern.
 9. MCP connections support no authentication, API-key authentication, and OAuth 2.0.
@@ -68,6 +68,18 @@ MCMC_MCP_URL="https://<mcp-host>/mcp" \
 	uv run --project msft-mcmc-mcp/msft-mcmc-mcp-service mcp --user james
 ```
 
+The deployed public routes are:
+
+```bash
+uv run --project msft-mcmc-mcp/msft-mcmc-mcp-service \
+	mcp --user james --url https://example-apim.azure-api.net/native/mcp
+
+uv run --project msft-mcmc-mcp/msft-mcmc-mcp-service \
+	mcp --user james --url https://example-apim.azure-api.net/gateway/mcp
+```
+
+The native route returns only the selected user's authorized customers. The gateway route proves APIM token validation against the trusted service and returns the complete fictitious catalog for every valid scoped demonstration user.
+
 Use another environment file when the generated configuration is not at the repository root:
 
 ```bash
@@ -119,4 +131,4 @@ Successful runs print structured JSON containing the selected display name, the 
 
 ## Immediate Next Step
 
-The validated disposable environment is intentionally retained at the operator's request. When testing is complete, destroy resources in application-then-foundation order and remove local secret-bearing state using the documented procedure.
+Use the two public OAuth routes to configure and validate the `MCMC003` Copilot Studio agent. The disposable environment remains live for that handoff; when testing is complete, destroy resources in application-then-foundation order and remove local secret-bearing state using the documented procedure.

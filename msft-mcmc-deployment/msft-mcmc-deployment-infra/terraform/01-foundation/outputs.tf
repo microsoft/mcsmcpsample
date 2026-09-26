@@ -73,6 +73,11 @@ output "api_management_subnet_id" {
   value       = azurerm_subnet.api_management.id
 }
 
+output "api_management_subnet_address_prefix" {
+  description = "Address prefix of the delegated API Management integration subnet."
+  value       = one(azurerm_subnet.api_management.address_prefixes)
+}
+
 output "entra_tenant_id" {
   description = "Microsoft Entra tenant identifier used by the MCP API."
   value       = var.tenant_id

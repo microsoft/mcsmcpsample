@@ -158,3 +158,18 @@ resource "azurerm_api_management" "deployment" {
 
   depends_on = [azurerm_subnet_network_security_group_association.api_management]
 }
+
+resource "azurerm_monitor_diagnostic_setting" "api_management" {
+  name                           = "mcmc-apim-diagnostics"
+  target_resource_id             = azurerm_api_management.deployment.id
+  log_analytics_workspace_id     = azurerm_log_analytics_workspace.deployment.id
+  log_analytics_destination_type = "Dedicated"
+
+  enabled_log {
+    category_group = "allLogs"
+  }
+
+  enabled_metric {
+    category = "AllMetrics"
+  }
+}

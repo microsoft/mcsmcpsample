@@ -9,7 +9,7 @@ The module coordinate is `msft-mcmc-deployment`. Its `msft-mcmc-deployment-infra
 - `msft-mcmc-deployment-infra/terraform/root.hcl` defines shared Azure context, deterministic names, and tags.
 - `msft-mcmc-deployment-infra/terraform/01-foundation/` contains the foundation Terraform and Terragrunt configuration, stores state in `.terraform-state/smoke-foundation.terraform.tfstate`, and owns the resource group, ACR, virtual network, delegated subnets, Log Analytics workspace, private Container Apps environment, private DNS, Standard v2 API Management service, and shared Microsoft Entra identities.
 - `msft-mcmc-deployment-infra/terraform/02-container/buildandpush.sh` builds and pushes an immutable MCP service image through ACR Build and writes the gitignored `image.json` handoff manifest after a successful push.
-- `msft-mcmc-deployment-infra/terraform/03-application/` contains the application Terraform and Terragrunt configuration, stores state in `.terraform-state/smoke-application.terraform.tfstate`, and owns the trusted Container App, its user-assigned identity, its `AcrPull` assignment, and its API Management API configuration.
+- `msft-mcmc-deployment-infra/terraform/03-application/` contains the application Terraform and Terragrunt configuration, stores state in `.terraform-state/smoke-application.terraform.tfstate`, and owns both Container Apps, their shared user-assigned identity and `AcrPull` assignment, and the governed API Management APIs and policies.
 
 ## Environment
 
@@ -23,23 +23,23 @@ Terraform writes the tenant, application, scope, user principal name, object ide
 
 The private Container Apps environment uses delegated subnet `10.58.0.64/27`, internal ingress, and disabled public network access. Azure Container Apps requires the separate platform-managed `mcmc-container-apps-managed-rg` resource group for its infrastructure. The environment currently has private static IP `10.58.0.82`.
 
-API Management service `mcmc-<subscription-prefix>-apim` uses the Standard v2 SKU and outbound VNet integration through the dedicated `10.58.0.0/27` subnet delegated to `Microsoft.Web/serverFarms`. The VNet-linked private DNS zone for the Container Apps environment resolves its wildcard host to `10.58.0.82`, allowing APIM to reach private Container App ingress. Standard v2 retains a public gateway; Layer 3 publishes the trusted MCP endpoint at `https://mcmc-<subscription-prefix>-apim.azure-api.net/mcp` and requires an active API-scoped APIM subscription key. The Terraform-managed primary key is available only through the sensitive `api_management_subscription_primary_key` output.
+API Management service `mcmc-<subscription-prefix>-apim` uses the Standard v2 SKU and outbound VNet integration through the dedicated `10.58.0.0/27` subnet delegated to `Microsoft.Web/serverFarms`. The VNet-linked private DNS zone for the Container Apps environment resolves its wildcard host to `10.58.0.82`, allowing APIM to reach private Container App ingress. Standard v2 retains a public gateway. Layer 3 publishes `https://mcmc-<subscription-prefix>-apim.azure-api.net/native/mcp` for bearer pass-through to the Entra-mode service and `https://mcmc-<subscription-prefix>-apim.azure-api.net/gateway/mcp` for APIM bearer validation before trusted-mode forwarding. Both routes use Entra OAuth rather than APIM subscription keys.
 
 The foundation ACR uses the Basic SKU with administrator credentials disabled. Public registry access remains enabled so authenticated developers can push images from the development environment using Microsoft Entra ID. Container Apps must pull images through managed identity and `AcrPull` role assignment in the application layer.
 
-Layer 3 deploys `mcmc-mcp-trusted` and `mcmc-mcp-entra` from the same exact Layer 2 image digest with one replica each, internal environment ingress on port `8000`, and `/health` startup, readiness, and liveness probes. The trusted app uses `AUTH_MODE=trusted`. The Entra app uses `AUTH_MODE=entra`, validates v2 tokens against the Foundation tenant and API client-ID audience, requires the `access_as_user` delegated scope, and authorizes immutable object identifiers through the Foundation access policy. Both stable FQDNs use the private Container Apps environment domain and do not resolve through public DNS.
+Layer 3 deploys `mcmc-mcp-trusted` and `mcmc-mcp-entra` from the same exact Layer 2 image digest with one replica each, internal environment ingress on port `8000`, and `/health` startup, readiness, and liveness probes. Each app permits ingress only from the delegated APIM subnet. The trusted app uses `AUTH_MODE=trusted`. The Entra app uses `AUTH_MODE=entra`, validates v2 tokens against the Foundation tenant and API client-ID audience, requires the `access_as_user` delegated scope, and authorizes immutable object identifiers through the Foundation access policy. Both stable FQDNs use the private Container Apps environment domain and do not resolve through public DNS.
 
-The deployed Entra access matrix was validated from an Azure management-plane exec shell in the running private replica. This temporary authorized path resolved the private HTTPS endpoint without adding public ingress or an APIM route; independent device-code runs returned the expected James, Jane, and Bill customer sets. A separate exec shell in the trusted replica used the official MCP client without an authorization header, discovered both customer tools, and returned all four fictitious customers.
+Both public APIM routes were validated with independent device-code sessions for James, Jane, and Bill. The native route returned only James's two assigned customers, only Jane's two assigned customers, and an empty list for Bill. The gateway route accepted each valid tenant, audience, and scope token, removed the bearer header, and returned all four fictitious customers from the intentionally unfiltered trusted service.
 
-A tagged MCP discovery request from the temporary private client path propagated the same client-generated correlation identifier into the trusted Container App telemetry. The matching completion records contained only the identifier, duration, event name, HTTP method, request path, and status code; no authorization headers, tokens, customer payloads, or response bodies were logged.
+A tagged MCP request propagates a sanitized `x-correlation-id` through APIM to Container App telemetry. APIM resource logs and metrics are sent to the existing Log Analytics workspace with request and response body logging disabled. Application completion records contain only the identifier, duration, event name, HTTP method, request path, and status code; authorization headers, tokens, customer payloads, and response bodies are not logged.
 
-Layer 3 configures API Management operations for `GET`, `POST`, and `DELETE` on `/mcp` and `GET` on `/health`. Its API policy disables request and response buffering for Streamable HTTP forwarding. Live gateway tests returned HTTP 401 without a subscription key and HTTP 200 with the managed key for both `/health` and MCP initialization, proving subscription enforcement, APIM outbound VNet integration, private DNS resolution, and private backend connectivity. A uniquely tagged health request also produced the same sanitized correlation identifier in the APIM response and private Container App telemetry.
+Layer 3 configures `GET`, `POST`, and `DELETE` MCP operations under both route prefixes and publishes RFC 9728 protected-resource metadata for each route. Shared policy controls require HTTPS, cap request bodies at 1 MiB, rate-limit by source address, forward with a 300-second timeout and no body buffering, sanitize correlation identifiers, and return sanitized errors. The gateway route validates signed tokens with tenant-specific v2 metadata, exact issuer, API client-ID audience, expiration, tenant, and delegated scope before deleting `Authorization`. Missing, malformed, and wrong-audience tokens return `401`; an over-limit request returns `413`. The retired root subscription-key API has been removed.
 
 Terraform authenticates through the current Azure CLI session. Terragrunt stores state locally under the repository-root `.terraform-state/` directory, which is excluded from source control. The operator must verify the selected Azure account before every plan, apply, or destroy.
 
 ## Security Boundary
 
-MCMC001 provides private Container Apps environment isolation, private DNS, APIM outbound VNet reachability, and an API-scoped subscription key on the trusted APIM route. It does not yet make APIM the exclusive authenticated path to both backends. `MCMC002` owns the governed bearer-token pass-through route to `mcmc-mcp-entra`, the APIM `validate-jwt` route to `mcmc-mcp-trusted`, and enforcement that prevents bypassing APIM authentication for the trusted backend.
+APIM is the only application ingress path to both Container Apps. Container App IP restrictions allow `10.58.0.0/27`, the delegated APIM integration subnet, and deny other sources; a live request from one backend to the other returned `403`. The native route preserves the bearer token for validation and per-`oid` authorization by `mcmc-mcp-entra`. The gateway route validates the bearer token and delegated scope at APIM, removes the header, and invokes `mcmc-mcp-trusted`, which deliberately returns the complete fictitious catalog. Private DNS and the internal Container Apps environment prevent direct public backend resolution.
 
 ## Configuration
 
@@ -62,8 +62,8 @@ Plan and apply Foundation first:
 
 ```bash
 cd msft-mcmc-deployment/msft-mcmc-deployment-infra/terraform/01-foundation
-terragrunt plan -out=/tmp/mcmc-foundation.tfplan
-terragrunt apply /tmp/mcmc-foundation.tfplan
+terragrunt run -- plan -out=/tmp/mcmc-foundation.tfplan
+terragrunt run -- apply /tmp/mcmc-foundation.tfplan
 cd -
 ```
 
@@ -79,8 +79,8 @@ Plan and apply the application layer last:
 
 ```bash
 cd msft-mcmc-deployment/msft-mcmc-deployment-infra/terraform/03-application
-terragrunt plan -out=/tmp/mcmc-application.tfplan
-terragrunt apply /tmp/mcmc-application.tfplan
+terragrunt run -- plan -out=/tmp/mcmc-application.tfplan
+terragrunt run -- apply /tmp/mcmc-application.tfplan
 cd -
 ```
 
@@ -108,35 +108,53 @@ az containerapp logs show \
 	--format text
 ```
 
-Verify the trusted health endpoint through APIM without printing its subscription key:
+Read the public route URLs without exposing any credentials:
 
 ```bash
 cd msft-mcmc-deployment/msft-mcmc-deployment-infra/terraform/03-application
-subscription_key="$(terragrunt output -raw api_management_subscription_primary_key)"
-health_url="$(terragrunt output -raw api_management_health_url)"
-curl --fail --silent --show-error \
-	-H "Ocp-Apim-Subscription-Key: ${subscription_key}" \
-	"${health_url}"
-unset subscription_key
+native_url="$(terragrunt run -- output -raw api_management_native_mcp_url)"
+gateway_url="$(terragrunt run -- output -raw api_management_gateway_mcp_url)"
 cd -
 ```
 
-Use a VNet-connected client for the private Entra endpoint. For disposable validation, `az containerapp exec` can open a management-plane shell in a running replica without changing ingress. Pass only the CLI's allowlisted tenant, public-client, scope, UPN, and OID values; never transfer initial passwords, access tokens, or the complete root `.env`.
+Run the device-code CLI through either route. Native mode applies the per-user access matrix; gateway mode validates the token at APIM and returns the trusted service's complete fictitious catalog:
+
+```bash
+uv run --project msft-mcmc-mcp/msft-mcmc-mcp-service mcp --user james --url "$native_url"
+uv run --project msft-mcmc-mcp/msft-mcmc-mcp-service mcp --user james --url "$gateway_url"
+unset native_url gateway_url
+```
 
 ## Verification
 
-Run static Terraform checks and confirm live application state has converged:
+Generate a reviewed Application plan and its JSON representation:
 
 ```bash
-terraform -chdir=msft-mcmc-deployment/msft-mcmc-deployment-infra/terraform/01-foundation validate
-terraform -chdir=msft-mcmc-deployment/msft-mcmc-deployment-infra/terraform/03-application validate
-
 cd msft-mcmc-deployment/msft-mcmc-deployment-infra/terraform/03-application
-terragrunt plan -detailed-exitcode
+terragrunt run -- plan -out=/tmp/mcmc-application.tfplan
+terragrunt run -- show -json /tmp/mcmc-application.tfplan > /tmp/mcmc-application.json
 cd -
 ```
 
-Exit code `0` from the final command means live infrastructure matches configuration; exit code `2` means a nonempty plan requires review. Both Container App FQDNs must fail public DNS resolution outside the private network path. Missing or invalid APIM subscription keys must fail, while the managed key must return `200` from `/health`.
+Run static checks, validate the rendered APIM policy, and confirm live state has converged:
+
+```bash
+cd msft-mcmc-deployment/msft-mcmc-deployment-infra/terraform/01-foundation
+terragrunt run -- validate
+cd ../03-application
+terragrunt run -- validate
+python ../../tests/validate_apim_plan.py /tmp/mcmc-application.json
+terragrunt run -- plan -detailed-exitcode
+cd -
+```
+
+Exit code `0` from the final plan means live infrastructure matches configuration; exit code `2` means a nonempty plan requires review. Both Container App FQDNs must fail public DNS resolution outside the private network path. Both OAuth metadata URLs must return `200`; missing, malformed, expired, incorrectly scoped, or incorrectly targeted bearer tokens must return `401` from the applicable route.
+
+## Downstream Handoff
+
+`MCMC003` should configure Copilot Studio against the `/native/mcp` and `/gateway/mcp` public URLs. Both routes advertise the same delegated Entra scope through route-specific protected-resource metadata. Native mode demonstrates per-user customer authorization; gateway mode demonstrates APIM token and scope enforcement against the intentionally unfiltered trusted service.
+
+`MCMC004` should reuse the route-specific and shared policy bodies, backend FQDNs, delegated scope, private DNS zone, and virtual network. The current Standard v2 service provides public inbound gateway access with private outbound integration. Private Power Platform-to-APIM ingress requires a separately validated supported APIM networking configuration and must preserve the route prefixes, metadata contracts, OAuth checks, backend CIDR restrictions, and no-body diagnostic settings.
 
 ## Teardown
 
@@ -144,16 +162,16 @@ Destroy the application layer before Foundation so Container Apps, APIM applicat
 
 ```bash
 cd msft-mcmc-deployment/msft-mcmc-deployment-infra/terraform/03-application
-terragrunt plan -destroy -out=/tmp/mcmc-application-destroy.tfplan
-terragrunt apply /tmp/mcmc-application-destroy.tfplan
+terragrunt run -- plan -destroy -out=/tmp/mcmc-application-destroy.tfplan
+terragrunt run -- apply /tmp/mcmc-application-destroy.tfplan
 cd ../01-foundation
 
-api_client_id="$(terragrunt output -raw entra_mcp_api_client_id)"
-cli_client_id="$(terragrunt output -raw entra_mcp_cli_client_id)"
-demo_upns="$(terragrunt output -json entra_demo_user_principal_names)"
+api_client_id="$(terragrunt run -- output -raw entra_mcp_api_client_id)"
+cli_client_id="$(terragrunt run -- output -raw entra_mcp_cli_client_id)"
+demo_upns="$(terragrunt run -- output -json entra_demo_user_principal_names)"
 
-terragrunt plan -destroy -out=/tmp/mcmc-foundation-destroy.tfplan
-terragrunt apply /tmp/mcmc-foundation-destroy.tfplan
+terragrunt run -- plan -destroy -out=/tmp/mcmc-foundation-destroy.tfplan
+terragrunt run -- apply /tmp/mcmc-foundation-destroy.tfplan
 cd -
 ```
 
