@@ -60,3 +60,21 @@ output "api_management_oauth_metadata_urls" {
     route => "${local.gateway_url}/${metadata.path}"
   }
 }
+
+output "private_api_management_native_mcp_url" {
+  description = "Private APIM MCP URL that passes bearer tokens to the Entra-mode backend."
+  value       = local.private_native_mcp_url
+}
+
+output "private_api_management_gateway_mcp_url" {
+  description = "Private APIM MCP URL that validates bearer tokens before invoking the trusted backend."
+  value       = local.private_gateway_mcp_url
+}
+
+output "private_api_management_oauth_metadata_urls" {
+  description = "Protected-resource metadata URLs on the private APIM instance."
+  value = {
+    for route, metadata in local.private_protected_resource_metadata :
+    route => "${local.private_gateway_url}/${metadata.path}"
+  }
+}

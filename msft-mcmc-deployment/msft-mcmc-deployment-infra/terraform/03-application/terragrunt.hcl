@@ -42,5 +42,8 @@ inputs = {
   api_management_name                      = dependency.foundation.outputs.api_management_name
   api_management_gateway_url               = dependency.foundation.outputs.api_management_gateway_url
   api_management_subnet_address_prefix     = dependency.foundation.outputs.api_management_subnet_address_prefix
+  private_api_management_name              = dependency.foundation.outputs.private_api_management_name
+  private_api_management_gateway_url       = dependency.foundation.outputs.private_api_management_gateway_url
+  private_api_management_subnet_address_prefix = dependency.foundation.outputs.private_api_management_subnet_address_prefix
   tags                                     = local.root_locals.common_tags
 }

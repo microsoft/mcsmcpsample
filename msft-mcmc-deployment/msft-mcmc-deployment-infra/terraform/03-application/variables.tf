@@ -103,6 +103,21 @@ variable "api_management_subnet_address_prefix" {
   type        = string
 }
 
+variable "private_api_management_name" {
+  description = "Foundation private Azure API Management service name."
+  type        = string
+}
+
+variable "private_api_management_gateway_url" {
+  description = "Gateway URL of the foundation private Azure API Management service."
+  type        = string
+}
+
+variable "private_api_management_subnet_address_prefix" {
+  description = "Private API Management integration address prefix allowed to reach the MCP backends."
+  type        = string
+}
+
 variable "tags" {
   description = "Tags applied to application resources."
   type        = map(string)

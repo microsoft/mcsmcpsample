@@ -29,14 +29,14 @@ variable "local_env_file_path" {
 }
 
 variable "entra_mcp_connector_redirect_uris" {
-  description = "Copilot Studio callback URIs keyed by public_native and public_gateway; leave empty until each connector is created."
+  description = "Copilot Studio callback URIs keyed by public_native, public_gateway, private_native, and private_gateway; leave empty until each connector is created."
   type        = map(set(string))
 
   validation {
     condition = (
-      length(setsubtract(toset(keys(var.entra_mcp_connector_redirect_uris)), toset(["public_native", "public_gateway"]))) == 0
+      length(setsubtract(toset(keys(var.entra_mcp_connector_redirect_uris)), toset(["public_native", "public_gateway", "private_native", "private_gateway"]))) == 0
     )
-    error_message = "Connector redirect URI keys must be public_native or public_gateway."
+    error_message = "Connector redirect URI keys must be public_native, public_gateway, private_native, or private_gateway."
   }
 }
 

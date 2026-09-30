@@ -78,6 +78,61 @@ output "api_management_subnet_address_prefix" {
   value       = one(azurerm_subnet.api_management.address_prefixes)
 }
 
+output "private_api_management_id" {
+  description = "Resource identifier of the private Azure API Management service."
+  value       = azurerm_api_management.private.id
+}
+
+output "private_api_management_name" {
+  description = "Name of the private Azure API Management service."
+  value       = azurerm_api_management.private.name
+}
+
+output "private_api_management_gateway_url" {
+  description = "Gateway URL of the private Azure API Management service."
+  value       = azurerm_api_management.private.gateway_url
+}
+
+output "private_api_management_subnet_id" {
+  description = "Resource identifier of the private API Management outbound integration subnet."
+  value       = azurerm_subnet.private_api_management.id
+}
+
+output "private_api_management_subnet_address_prefix" {
+  description = "Address prefix of the private API Management outbound integration subnet."
+  value       = one(azurerm_subnet.private_api_management.address_prefixes)
+}
+
+output "api_management_private_endpoint_id" {
+  description = "Resource identifier of the API Management gateway private endpoint."
+  value       = azurerm_private_endpoint.api_management.id
+}
+
+output "api_management_private_endpoint_ip_address" {
+  description = "Private IP address assigned to the API Management gateway private endpoint."
+  value       = azurerm_private_endpoint.api_management.private_service_connection[0].private_ip_address
+}
+
+output "api_management_private_dns_zone_id" {
+  description = "Resource identifier of the API Management Private Link DNS zone."
+  value       = azurerm_private_dns_zone.api_management.id
+}
+
+output "power_platform_networks" {
+  description = "Power Platform network-injection virtual network and subnet identifiers keyed by Japan Azure region."
+  value = {
+    for region, network in azurerm_virtual_network.power_platform : region => {
+      virtual_network_id = network.id
+      subnet_id          = azurerm_subnet.power_platform[region].id
+    }
+  }
+}
+
+output "power_platform_enterprise_policy_id" {
+  description = "Resource identifier of the Power Platform network-injection enterprise policy."
+  value       = azapi_resource.power_platform_network_injection.id
+}
+
 output "entra_tenant_id" {
   description = "Microsoft Entra tenant identifier used by the MCP API."
   value       = var.tenant_id

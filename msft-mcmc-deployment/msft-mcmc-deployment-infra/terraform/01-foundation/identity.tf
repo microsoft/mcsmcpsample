@@ -38,6 +38,14 @@ locals {
       display_name  = "MCMC Public Gateway MCP Connector"
       redirect_uris = lookup(var.entra_mcp_connector_redirect_uris, "public_gateway", [])
     }
+    private_native = {
+      display_name  = "MCMC Private Native MCP Connector"
+      redirect_uris = lookup(var.entra_mcp_connector_redirect_uris, "private_native", [])
+    }
+    private_gateway = {
+      display_name  = "MCMC Private Gateway MCP Connector"
+      redirect_uris = lookup(var.entra_mcp_connector_redirect_uris, "private_gateway", [])
+    }
   }
 }
 
@@ -196,6 +204,10 @@ resource "local_sensitive_file" "environment" {
     MCMC_PUBLIC_NATIVE_CONNECTOR_CLIENT_SECRET=${jsonencode(azuread_application_password.mcp_connector["public_native"].value)}
     MCMC_PUBLIC_GATEWAY_CONNECTOR_CLIENT_ID=${azuread_application.mcp_connector["public_gateway"].client_id}
     MCMC_PUBLIC_GATEWAY_CONNECTOR_CLIENT_SECRET=${jsonencode(azuread_application_password.mcp_connector["public_gateway"].value)}
+    MCMC_PRIVATE_NATIVE_CONNECTOR_CLIENT_ID=${azuread_application.mcp_connector["private_native"].client_id}
+    MCMC_PRIVATE_NATIVE_CONNECTOR_CLIENT_SECRET=${jsonencode(azuread_application_password.mcp_connector["private_native"].value)}
+    MCMC_PRIVATE_GATEWAY_CONNECTOR_CLIENT_ID=${azuread_application.mcp_connector["private_gateway"].client_id}
+    MCMC_PRIVATE_GATEWAY_CONNECTOR_CLIENT_SECRET=${jsonencode(azuread_application_password.mcp_connector["private_gateway"].value)}
     MCMC_JAMES_UPN=${azuread_user.demo["james"].user_principal_name}
     MCMC_JAMES_OID=${azuread_user.demo["james"].object_id}
     MCMC_JAMES_INITIAL_PASSWORD=${jsonencode(random_password.demo_user["james"].result)}

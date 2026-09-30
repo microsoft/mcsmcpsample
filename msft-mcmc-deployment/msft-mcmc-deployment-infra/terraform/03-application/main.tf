@@ -6,6 +6,9 @@ locals {
   gateway_url              = trimsuffix(var.api_management_gateway_url, "/")
   native_mcp_url           = "${local.gateway_url}/native/mcp"
   gateway_mcp_url          = "${local.gateway_url}/gateway/mcp"
+  private_gateway_url      = trimsuffix(var.private_api_management_gateway_url, "/")
+  private_native_mcp_url   = "${local.private_gateway_url}/native/mcp"
+  private_gateway_mcp_url  = "${local.private_gateway_url}/gateway/mcp"
   entra_issuer             = "https://login.microsoftonline.com/${var.entra_tenant_id}/v2.0"
   openid_configuration     = "${local.entra_issuer}/.well-known/openid-configuration"
   correlation_id           = "@(System.Text.RegularExpressions.Regex.IsMatch(context.Request.Headers.GetValueOrDefault(\"x-correlation-id\", \"\"), \"^[A-Za-z0-9._-]{1,128}$\") ? context.Request.Headers.GetValueOrDefault(\"x-correlation-id\", \"\") : context.RequestId.ToString())"
@@ -34,6 +37,16 @@ locals {
     }
     gateway = {
       resource = local.gateway_mcp_url
+      path     = ".well-known/oauth-protected-resource/gateway/mcp"
+    }
+  }
+  private_protected_resource_metadata = {
+    native = {
+      resource = local.private_native_mcp_url
+      path     = ".well-known/oauth-protected-resource/native/mcp"
+    }
+    gateway = {
+      resource = local.private_gateway_mcp_url
       path     = ".well-known/oauth-protected-resource/gateway/mcp"
     }
   }
@@ -104,6 +117,13 @@ resource "azurerm_container_app" "gateway" {
       action           = "Allow"
       ip_address_range = var.api_management_subnet_address_prefix
       description      = "Only the delegated API Management subnet may invoke this backend."
+    }
+
+    ip_security_restriction {
+      name             = "allow-private-api-management"
+      action           = "Allow"
+      ip_address_range = var.private_api_management_subnet_address_prefix
+      description      = "Allow the dedicated private API Management integration subnet."
     }
 
     traffic_weight {
@@ -196,6 +216,13 @@ resource "azurerm_container_app" "native" {
       action           = "Allow"
       ip_address_range = var.api_management_subnet_address_prefix
       description      = "Only the delegated API Management subnet may invoke this backend."
+    }
+
+    ip_security_restriction {
+      name             = "allow-private-api-management"
+      action           = "Allow"
+      ip_address_range = var.private_api_management_subnet_address_prefix
+      description      = "Allow the dedicated private API Management integration subnet."
     }
 
     traffic_weight {
@@ -436,6 +463,192 @@ resource "azurerm_api_management_api_policy" "metadata" {
 
   api_name            = azurerm_api_management_api.metadata[each.key].name
   api_management_name = var.api_management_name
+  resource_group_name = var.resource_group_name
+
+  xml_content = <<-XML
+    <policies>
+      <inbound>
+        <base />
+        <return-response>
+          <set-status code="200" reason="OK" />
+          <set-header name="Content-Type" exists-action="override"><value>application/json</value></set-header>
+          <set-body>${jsonencode({
+  resource                 = each.value.resource
+  authorization_servers    = [local.entra_issuer]
+  scopes_supported         = [var.entra_delegated_scope]
+  bearer_methods_supported = ["header"]
+})}</set-body>
+        </return-response>
+      </inbound>
+      <backend><base /></backend>
+      <outbound><base /></outbound>
+      <on-error><base /></on-error>
+    </policies>
+  XML
+}
+
+resource "azurerm_api_management_api" "private_mcp" {
+  for_each = {
+    native = {
+      display_name = "MCMC Private Native OAuth MCP"
+      path         = "native"
+      service_url  = "https://${azurerm_container_app.native.ingress[0].fqdn}"
+    }
+    gateway = {
+      display_name = "MCMC Private Gateway OAuth MCP"
+      path         = "gateway"
+      service_url  = "https://${azurerm_container_app.gateway.ingress[0].fqdn}"
+    }
+  }
+
+  name                  = "mcmc-${each.key}-mcp"
+  resource_group_name   = var.resource_group_name
+  api_management_name   = var.private_api_management_name
+  revision              = "1"
+  display_name          = each.value.display_name
+  path                  = each.value.path
+  protocols             = ["https"]
+  service_url           = each.value.service_url
+  subscription_required = false
+}
+
+resource "azurerm_api_management_api_operation" "private_mcp" {
+  for_each = {
+    for pair in setproduct(keys(azurerm_api_management_api.private_mcp), keys(local.api_operations)) :
+    "${pair[0]}-${pair[1]}" => {
+      route     = pair[0]
+      operation = pair[1]
+    }
+  }
+
+  operation_id        = replace(each.value.operation, "_", "-")
+  api_name            = azurerm_api_management_api.private_mcp[each.value.route].name
+  api_management_name = var.private_api_management_name
+  resource_group_name = var.resource_group_name
+  display_name        = local.api_operations[each.value.operation].display_name
+  method              = local.api_operations[each.value.operation].method
+  url_template        = local.api_operations[each.value.operation].url_template
+}
+
+resource "azurerm_api_management_api_policy" "private_mcp" {
+  for_each = azurerm_api_management_api.private_mcp
+
+  api_name            = each.value.name
+  api_management_name = var.private_api_management_name
+  resource_group_name = var.resource_group_name
+
+  xml_content = <<-XML
+    <policies>
+      <inbound>
+        <base />
+        ${local.common_inbound_policy}
+        ${each.key == "gateway" ? <<-AUTH
+        <validate-jwt header-name="Authorization" require-scheme="Bearer" require-expiration-time="true" require-signed-tokens="true" failed-validation-httpcode="401" failed-validation-error-message="Unauthorized" output-token-variable-name="validatedJwt">
+          <openid-config url="${local.openid_configuration}" />
+          <audiences>
+            <audience>${var.entra_api_audience}</audience>
+          </audiences>
+          <issuers>
+            <issuer>${local.entra_issuer}</issuer>
+          </issuers>
+          <required-claims>
+            <claim name="tid" match="all"><value>${var.entra_tenant_id}</value></claim>
+            <claim name="scp" match="any" separator=" "><value>${local.entra_required_scope}</value></claim>
+          </required-claims>
+        </validate-jwt>
+        <choose>
+          <when condition="@(!((Jwt)context.Variables[&quot;validatedJwt&quot;]).Claims.GetValueOrDefault(&quot;groups&quot;, &quot;&quot;).Split(',').Contains(&quot;${var.entra_gateway_authorized_group_id}&quot;))">
+            <return-response>
+              <set-status code="403" reason="Forbidden" />
+              <set-header name="x-correlation-id" exists-action="override"><value>${local.response_correlation_id}</value></set-header>
+            </return-response>
+          </when>
+        </choose>
+        <set-header name="Authorization" exists-action="delete" />
+        AUTH
+  : ""}
+      </inbound>
+      <backend>
+        ${local.common_backend_policy}
+      </backend>
+      <outbound>
+        <base />
+        <set-header name="x-correlation-id" exists-action="override">
+          <value>${local.response_correlation_id}</value>
+        </set-header>
+        ${each.key == "native" ? <<-AUTH
+        <choose>
+          <when condition="@(context.Response.StatusCode == 401)">
+            <set-header name="WWW-Authenticate" exists-action="override">
+              <value>Bearer resource_metadata="${local.private_gateway_url}/.well-known/oauth-protected-resource/native/mcp"</value>
+            </set-header>
+          </when>
+        </choose>
+        AUTH
+: ""}
+      </outbound>
+      <on-error>
+        <choose>
+          <when condition="@(context.LastError.Reason == &quot;RateLimitExceeded&quot;)">
+            <return-response>
+              <set-status code="429" reason="Too Many Requests" />
+              <set-header name="x-correlation-id" exists-action="override"><value>${local.response_correlation_id}</value></set-header>
+              <set-body>Too many requests</set-body>
+            </return-response>
+          </when>
+          <when condition="@(context.LastError.Reason == &quot;TokenNotPresent&quot; || context.LastError.Source == &quot;validate-jwt&quot;)">
+            <return-response>
+              <set-status code="401" reason="Unauthorized" />
+              <set-header name="x-correlation-id" exists-action="override"><value>${local.response_correlation_id}</value></set-header>
+              <set-header name="WWW-Authenticate" exists-action="override">
+                <value>Bearer resource_metadata="${local.private_gateway_url}/.well-known/oauth-protected-resource/${each.key}/mcp"</value>
+              </set-header>
+              <set-body>Unauthorized</set-body>
+            </return-response>
+          </when>
+          <otherwise>
+            <return-response>
+              <set-status code="500" reason="Gateway Error" />
+              <set-header name="x-correlation-id" exists-action="override"><value>${local.response_correlation_id}</value></set-header>
+              <set-body>Gateway request failed</set-body>
+            </return-response>
+          </otherwise>
+        </choose>
+      </on-error>
+    </policies>
+  XML
+}
+
+resource "azurerm_api_management_api" "private_metadata" {
+  for_each = local.private_protected_resource_metadata
+
+  name                  = "mcmc-${each.key}-oauth-metadata"
+  resource_group_name   = var.resource_group_name
+  api_management_name   = var.private_api_management_name
+  revision              = "1"
+  display_name          = "MCMC Private ${title(each.key)} OAuth Metadata"
+  path                  = each.value.path
+  protocols             = ["https"]
+  subscription_required = false
+}
+
+resource "azurerm_api_management_api_operation" "private_metadata" {
+  for_each = local.private_protected_resource_metadata
+
+  operation_id        = "get-protected-resource-metadata"
+  api_name            = azurerm_api_management_api.private_metadata[each.key].name
+  api_management_name = var.private_api_management_name
+  resource_group_name = var.resource_group_name
+  display_name        = "Get protected resource metadata"
+  method              = "GET"
+  url_template        = "/"
+}
+
+resource "azurerm_api_management_api_policy" "private_metadata" {
+  for_each = local.private_protected_resource_metadata
+
+  api_name            = azurerm_api_management_api.private_metadata[each.key].name
+  api_management_name = var.private_api_management_name
   resource_group_name = var.resource_group_name
 
   xml_content = <<-XML

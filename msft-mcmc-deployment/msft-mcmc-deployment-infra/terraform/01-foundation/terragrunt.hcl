@@ -31,6 +31,12 @@ inputs = {
       "https://global.consent.azure-apim.net/redirect/mcmc-5fmcmc-20public-20gateway-20mcp-202-5f5e91a8aaf86d61ed",
       "https://global.consent.azure-apim.net/redirect/crd78-5fmcmc-20public-20gateway-20mcp-5fdc637fe08ae6ec65",
     ]
+    private_native = [
+      "https://global.consent.azure-apim.net/redirect/crd78-5fmcmc-20private-20native-20mcp-5fdc637fe08ae6ec65",
+    ]
+    private_gateway = [
+      "https://global.consent.azure-apim.net/redirect/crd78-5fmcmc-20private-20gateway-20mcp-5fdc637fe08ae6ec65",
+    ]
   }
   local_env_file_path                               = "${get_repo_root()}/.env"
   location                                          = local.root_locals.location
