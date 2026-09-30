@@ -17,7 +17,21 @@ MCMC Public Native has exactly one MCP connection and targets `/native/mcp`. API
 
 MCMC Public Gateway has exactly one MCP connection and targets `/gateway/mcp`. APIM validates the delegated token and membership in `mcmc-customer-admins`, removes the authorization header after successful authorization, and invokes the trusted MCP service. Authenticated nonmembers receive `403 Forbidden` before backend invocation.
 
-Both agents use the same deterministic instructions. Customer data must come from `list_customers` or `get_customer`; unavailable or rejected tools must not produce fabricated results.
+All four agents use the same deterministic instructions. Customer data must come from `list_accessible_customers` or `get_accessible_customer`; unavailable or rejected tools must not produce fabricated results.
+
+## API Setup And Teardown
+
+`setup.py` creates the four agents in this order: Public Gateway, Public Native, Private Gateway, and Private Native. It uses the Dataverse Web API for agents, system instructions, connection references, MCP bot components, and component-to-reference associations. It uses the Power Apps management API for one custom connector per agent.
+
+Each fresh setup run generates one random six-character alphanumeric suffix. The same suffix is included in all four custom connector display names, connection-reference display and logical names, and MCP component display and schema names. Stable agent names and schemas remain unsuffixed. This avoids Power Platform's soft-deleted connector name reservations and makes every dependency in one generated graph unambiguous. Idempotent runs recover the suffix from the existing MCP components and require all four graphs to use the same value.
+
+The script reads the tenant, delegated scope, and four connector client ID/secret pairs from the repository-root `.env` file. Each connector uses authorization-code OAuth with PKCE, tenant-specific v2 authorization and token endpoints, the delegated MCP scope, and `offline_access`. Public connectors target the public APIM hostname; private connectors target the private APIM hostname. Native and Gateway connectors use their respective `/native/mcp` and `/gateway/mcp` routes.
+
+Power Platform generates a callback URL for each connector. `setup.py` preserves existing web redirect URIs and registers the generated callback on the corresponding Microsoft Entra application through Azure CLI. It then verifies the agents, instructions, connector OAuth settings, endpoints, MCP components, and one-to-one connection-reference associations. The setup is idempotent.
+
+`teardown.py` removes the four agents and child components, matching connection references, user connections, and custom connectors in dependency order. It does not remove Microsoft Entra applications, Azure infrastructure, or the separate Private Connectivity Test artifacts.
+
+Delegated user connections cannot be completed non-interactively. After setup, each user must create or select the appropriate connector connection and complete OAuth sign-in and consent once.
 
 ## Source And Packaging
 
@@ -27,7 +41,7 @@ Connector configuration is stored as a deployment template. Before packaging, re
 
 A first deployment imports the solution to create the target connector and agent graph. The operator then registers the target-generated callback URI through Terraform, enters the connector client secret through the supported Power Platform interface, creates and consents the delegated connection, and binds the connection reference.
 
-## Current Manual Deployment
+## Legacy Manual Deployment
 
 For the current demonstration, create `MCMC Public Native` and `MCMC Public Gateway` manually in the target Dataverse-enabled environment. Enable generative orchestration, copy the deterministic instructions from the corresponding source-controlled `agent.mcs.yml`, and add exactly one manually configured OAuth 2.0 MCP tool to each agent. Native targets `/native/mcp`; Gateway targets `/gateway/mcp`.
 
