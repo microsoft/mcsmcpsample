@@ -6,22 +6,24 @@ This project demonstrates Microsoft Copilot Studio connecting through Azure API 
 
 The following findings are listed in reverse chronological order.
 
-1. On 2026-09-26, Standard v2 APIM exposed separate OAuth-governed Streamable HTTP routes at `/native/mcp` and `/gateway/mcp`, with RFC 9728 protected-resource metadata for each. The temporary subscription-key route was removed after validation.
-2. Independent device-code runs for James, Jane, and Bill discovered and invoked both tools through both routes. Native mode enforces the immutable-`oid` access matrix. Gateway mode validates tokens and requires membership in the Terraform-managed `mcmc-customer-admins` security group before returning the intentionally unfiltered trusted catalog.
-3. Missing, malformed, and wrong-audience tokens returned `401`. A real request body over 1 MiB returned `413`, and gateway-generated error responses preserved sanitized correlation identifiers.
-4. Both Container Apps allow ingress only from the delegated APIM subnet. A cross-backend request from a Container App replica returned `403`, and neither backend hostname resolves through public DNS.
-5. APIM gateway logs and metrics flow to the existing Log Analytics workspace without request or response bodies. Correlation identifiers join APIM and sanitized backend completion telemetry without exposing authorization headers, tokens, credentials, or customer payloads.
-6. On 2026-09-25, the licensed-tenant `MCP Capability Test` agent proved Copilot Studio compatibility through the former subscription-key MCP route. It discovered and invoked both tools despite displaying `We couldn't load this tool's contract`; that temporary tool connection and route were subsequently removed.
-7. The Copilot Studio trial supports creating, configuring, previewing, and testing agents, but it does not support publishing them. The trial product provides tenant capacity and cannot be assigned to a user or device. Publishing requires an appropriate paid subscription or supported pay-as-you-go arrangement.
-8. Copilot Studio supports MCP servers directly as agent tools. A connection requires a server name, description, and server URL; the interface presents `/mcp` as the expected endpoint pattern.
-9. MCP connections support no authentication, API-key authentication, and OAuth 2.0.
-10. OAuth 2.0 supports dynamic configuration with discovery, dynamic configuration, and manual configuration.
-11. Manual OAuth requires a client ID, client secret, authorization URL, token URL, refresh-token URL, and scopes.
-12. Dynamic OAuth with discovery requires only the MCP server URL and delegates metadata discovery to Copilot Studio. Manual OAuth remains the predictable initial option for a Microsoft Entra ID integration.
-13. Connector and MCP catalog loading errors do not necessarily prevent adding a new MCP server through **Add** > **Model Context Protocol (MCP)**.
-14. Dataverse and Copilot Studio provisioning are eventually consistent. Dataverse can report `Ready` before the Copilot Studio solution is fully available; refreshing after provisioning completes can resolve agent-creation errors.
-15. The existing `Contoso (default)` Power Platform environment is usable. Dataverse has been provisioned, and the `MCP Capability Test` agent has been created.
-16. The current user has sufficient administrative access: Global Administrator in Microsoft Entra ID, Azure Owner at management-group scope, and Environment Maker plus Basic User roles in Dataverse. A separate Copilot Studio tenant is not required.
+1. On 2026-09-27, `MCMC Import Test` was converted to a Managed Environment and associated with the `mcmc-private-connectivity` network-injection enterprise policy. The administration history reported `New Network Injection Policy` as `Succeeded`. A temporary custom connector in that environment reached both private APIM protected-resource metadata endpoints and received `200`, proving that Power Platform connector traffic can resolve and traverse the private path.
+2. The first request from the temporary connector returned `503 Container Allocation Successful` with `Retry-After: 60`. This is the expected VNet-injected connector container cold start; retrying after allocation completed succeeded without an infrastructure change.
+3. On 2026-09-26, Standard v2 APIM exposed separate OAuth-governed Streamable HTTP routes at `/native/mcp` and `/gateway/mcp`, with RFC 9728 protected-resource metadata for each. The temporary subscription-key route was removed after validation.
+4. Independent device-code runs for James, Jane, and Bill discovered and invoked both tools through both routes. Native mode enforces the immutable-`oid` access matrix. Gateway mode validates tokens and requires membership in the Terraform-managed `mcmc-customer-admins` security group before returning the intentionally unfiltered trusted catalog.
+5. Missing, malformed, and wrong-audience tokens returned `401`. A real request body over 1 MiB returned `413`, and gateway-generated error responses preserved sanitized correlation identifiers.
+6. Both Container Apps allow ingress only from the delegated APIM subnet. A cross-backend request from a Container App replica returned `403`, and neither backend hostname resolves through public DNS.
+7. APIM gateway logs and metrics flow to the existing Log Analytics workspace without request or response bodies. Correlation identifiers join APIM and sanitized backend completion telemetry without exposing authorization headers, tokens, credentials, or customer payloads.
+8. On 2026-09-25, the licensed-tenant `MCP Capability Test` agent proved Copilot Studio compatibility through the former subscription-key MCP route. It discovered and invoked both tools despite displaying `We couldn't load this tool's contract`; that temporary tool connection and route were subsequently removed.
+9. The Copilot Studio trial supports creating, configuring, previewing, and testing agents, but it does not support publishing them. The trial product provides tenant capacity and cannot be assigned to a user or device. Publishing requires an appropriate paid subscription or supported pay-as-you-go arrangement.
+10. Copilot Studio supports MCP servers directly as agent tools. A connection requires a server name, description, and server URL; the interface presents `/mcp` as the expected endpoint pattern.
+11. MCP connections support no authentication, API-key authentication, and OAuth 2.0.
+12. OAuth 2.0 supports dynamic configuration with discovery, dynamic configuration, and manual configuration.
+13. Manual OAuth requires a client ID, client secret, authorization URL, token URL, refresh-token URL, and scopes.
+14. Dynamic OAuth with discovery requires only the MCP server URL and delegates metadata discovery to Copilot Studio. Manual OAuth remains the predictable initial option for a Microsoft Entra ID integration.
+15. Connector and MCP catalog loading errors do not necessarily prevent adding a new MCP server through **Add** > **Model Context Protocol (MCP)**.
+16. Dataverse and Copilot Studio provisioning are eventually consistent. Dataverse can report `Ready` before the Copilot Studio solution is fully available; refreshing after provisioning completes can resolve agent-creation errors.
+17. The existing `Contoso (default)` Power Platform environment is usable. Dataverse has been provisioned, and the `MCP Capability Test` agent has been created.
+18. The current user has sufficient administrative access: Global Administrator in Microsoft Entra ID, Azure Owner at management-group scope, and Environment Maker plus Basic User roles in Dataverse. A separate Copilot Studio tenant is not required.
 
 ## Deployment
 
@@ -38,7 +40,399 @@ An administrator with the **System Administrator** role, or equivalent privilege
 - Select **Manage** > **Environments** > **Caldova (default)**.
 - On the environment command bar, select **Membership**.
 - In the **System Administrators** pane, select **Add me**.
-- Wait for the assignment to propagate, then refresh the environment. Self-elevation is audited in Microsoft Purview.
+- Wait for the assignment to propagate, then refresh the environment. Self-elevation is aud##### MCMC Public Gateway
+
+- Agent name:
+
+```text
+MCMC Public Gateway
+```
+
+- Enable generative orchestration:
+
+```text
+Yes
+```
+
+- Instructions:
+
+```text
+Use the exact shared instructions above.
+```
+
+- MCP server name:
+
+```text
+MCMC Public Gateway MCP test3
+```
+
+- Description:
+
+```text
+Retrieves customer records through the public APIM route where the gateway validates delegated access.
+```
+
+- MCP server URL:
+
+```text
+https://example-apim.azure-api.net/gateway/mcp
+```
+
+- Authentication:
+
+```text
+OAuth 2.0 > Manual
+```
+
+- Client ID source:
+
+```text
+MCMC_PUBLIC_GATEWAY_CONNECTOR_CLIENT_ID
+```
+
+- Client secret source:
+
+```text
+MCMC_PUBLIC_GATEWAY_CONNECTOR_CLIENT_SECRET
+```
+
+- Authorization URL:
+
+```text
+https://login.microsoftonline.com/11111111-1111-4111-8111-111111111111/oauth2/v2.0/authorize
+```
+
+- Token URL:
+
+```text
+https://login.microsoftonline.com/11111111-1111-4111-8111-111111111111/oauth2/v2.0/token
+```
+
+- Refresh URL:
+
+```text
+https://login.microsoftonline.com/11111111-1111-4111-8111-111111111111/oauth2/v2.0/token
+```
+
+- Scopes:
+
+```text
+api://example.onmicrosoft.com/mcmc-mcp/access_as_user offline_access
+```
+
+- PKCE:
+
+```text
+Enabled, if Copilot Studio exposes the option
+```
+
+- Entra implicit and hybrid flows:
+
+```text
+Leave Access tokens and ID tokens unchecked
+```
+
+- OAuth enforcement boundary:
+
+```text
+API Management gateway
+```
+
+##### MCMC Public Native
+
+- Agent name:
+
+```text
+MCMC Public Native
+```
+
+- Enable generative orchestration:
+
+```text
+Yes
+```
+
+- Instructions:
+
+```text
+Use the exact shared instructions above.
+```
+
+- MCP server name:
+
+```text
+MCMC Public Native MCP test3
+```
+
+- Description:
+
+```text
+Retrieves customer records through the public APIM route where the MCP server validates delegated access.
+```
+
+- MCP server URL:
+
+```text
+https://example-apim.azure-api.net/native/mcp
+```
+
+- Authentication:
+
+```text
+OAuth 2.0 > Manual
+```
+
+- Client ID source:
+
+```text
+MCMC_PUBLIC_NATIVE_CONNECTOR_CLIENT_ID
+```
+
+- Client secret source:
+
+```text
+MCMC_PUBLIC_NATIVE_CONNECTOR_CLIENT_SECRET
+```
+
+- Authorization URL:
+
+```text
+https://login.microsoftonline.com/11111111-1111-4111-8111-111111111111/oauth2/v2.0/authorize
+```
+
+- Token URL:
+
+```text
+https://login.microsoftonline.com/11111111-1111-4111-8111-111111111111/oauth2/v2.0/token
+```
+
+- Refresh URL:
+
+```text
+https://login.microsoftonline.com/11111111-1111-4111-8111-111111111111/oauth2/v2.0/token
+```
+
+- Scopes:
+
+```text
+api://example.onmicrosoft.com/mcmc-mcp/access_as_user offline_access
+```
+
+- PKCE:
+
+```text
+Enabled, if Copilot Studio exposes the option
+```
+
+- Entra implicit and hybrid flows:
+
+```text
+Leave Access tokens and ID tokens unchecked
+```
+
+- OAuth enforcement boundary:
+
+```text
+MCP service
+```
+
+##### MCMC Private Gateway
+
+- Agent name:
+
+```text
+MCMC Private Gateway
+```
+
+- Enable generative orchestration:
+
+```text
+Yes
+```
+
+- Instructions:
+
+```text
+Use the exact shared instructions above.
+```
+
+- MCP server name:
+
+```text
+MCMC Private Gateway MCP test3
+```
+
+- Description:
+
+```text
+Retrieves customer records through the private APIM route where the gateway validates delegated access.
+```
+
+- MCP server URL:
+
+```text
+https://example-apim-private.azure-api.net/gateway/mcp
+```
+
+- Authentication:
+
+```text
+OAuth 2.0 > Manual
+```
+
+- Client ID source:
+
+```text
+MCMC_PRIVATE_GATEWAY_CONNECTOR_CLIENT_ID
+```
+
+- Client secret source:
+
+```text
+MCMC_PRIVATE_GATEWAY_CONNECTOR_CLIENT_SECRET
+```
+
+- Authorization URL:
+
+```text
+https://login.microsoftonline.com/11111111-1111-4111-8111-111111111111/oauth2/v2.0/authorize
+```
+
+- Token URL:
+
+```text
+https://login.microsoftonline.com/11111111-1111-4111-8111-111111111111/oauth2/v2.0/token
+```
+
+- Refresh URL:
+
+```text
+https://login.microsoftonline.com/11111111-1111-4111-8111-111111111111/oauth2/v2.0/token
+```
+
+- Scopes:
+
+```text
+api://example.onmicrosoft.com/mcmc-mcp/access_as_user offline_access
+```
+
+- PKCE:
+
+```text
+Enabled, if Copilot Studio exposes the option
+```
+
+- Entra implicit and hybrid flows:
+
+```text
+Leave Access tokens and ID tokens unchecked
+```
+
+- OAuth enforcement boundary:
+
+```text
+API Management gateway
+```
+
+##### MCMC Private Native
+
+- Agent name:
+
+```text
+MCMC Private Native
+```
+
+- Enable generative orchestration:
+
+```text
+Yes
+```
+
+- Instructions:
+
+```text
+Use the exact shared instructions above.
+```
+
+- MCP server name:
+
+```text
+MCMC Private Native MCP test3
+```
+
+- Description:
+
+```text
+Retrieves customer records through the private APIM route where the MCP server validates delegated access.
+```
+
+- MCP server URL:
+
+```text
+https://example-apim-private.azure-api.net/native/mcp
+```
+
+- Authentication:
+
+```text
+OAuth 2.0 > Manual
+```
+
+- Client ID source:
+
+```text
+MCMC_PRIVATE_NATIVE_CONNECTOR_CLIENT_ID
+```
+
+- Client secret source:
+
+```text
+MCMC_PRIVATE_NATIVE_CONNECTOR_CLIENT_SECRET
+```
+
+- Authorization URL:
+
+```text
+https://login.microsoftonline.com/11111111-1111-4111-8111-111111111111/oauth2/v2.0/authorize
+```
+
+- Token URL:
+
+```text
+https://login.microsoftonline.com/11111111-1111-4111-8111-111111111111/oauth2/v2.0/token
+```
+
+- Refresh URL:
+
+```text
+https://login.microsoftonline.com/11111111-1111-4111-8111-111111111111/oauth2/v2.0/token
+```
+
+- Scopes:
+
+```text
+api://example.onmicrosoft.com/mcmc-mcp/access_as_user offline_access
+```
+
+- PKCE:
+
+```text
+Enabled, if Copilot Studio exposes the option
+```
+
+- Entra implicit and hybrid flows:
+
+```text
+Leave Access tokens and ID tokens unchecked
+```
+
+- OAuth enforcement boundary:
+
+```text
+MCP service
+```
+
+ted in Microsoft Purview.
 
 After obtaining administrator access, assign **System Customizer** to the deployment user:
 
@@ -151,59 +545,493 @@ rm -rf .artifacts/mcmc003
 
 Unmanaged solution deletion can also leave custom connectors behind. In Power Apps, select the target environment, open **More** > **Discover all** > **Custom connectors**, and delete the two MCMC connectors if they remain. Then open **Connections** and delete the obsolete delegated connections as the user who owns them; a managed-identity PAC profile cannot delete user-owned connections. Confirm that the solutions, agents, custom connectors, and connections are absent before recreating the agents.
 
+#### Manually Enable and Validate Private Power Platform Networking
+
+The private Azure topology is deployed before these manual steps. It includes the private Standard v2 APIM instance, its private endpoint and `privatelink.azure-api.net` private DNS zone, paired Power Platform virtual networks in `japaneast` and `japanwest`, delegated subnets, bidirectional peering to the deployment virtual network, and the `mcmc-private-connectivity` network-injection enterprise policy. Complete the following steps in the `MCMC Import Test` Sandbox environment.
+
+Enable Managed Environments:
+
+1. Sign in to the [Power Platform admin center](https://admin.powerplatform.microsoft.com/).
+2. Select **Manage** > **Environments** > **MCMC Import Test**.
+3. Select **Edit managed environments** and enable Managed Environments.
+4. Return to the environment details page and confirm **Managed environments** shows **Yes**.
+5. Open **History** and confirm **Enable Managed Environment** has status **Succeeded**.
+
+Associate the network-injection enterprise policy:
+
+1. In the far-left Power Platform admin center navigation rail, select the **Security** shield icon. This is a top-level feature area and is not part of the expanded **Manage** menu.
+2. Select **Data and privacy** > **Azure Virtual Network policies**.
+3. Select the `MCMC Import Test` environment and the `mcmc-private-connectivity` policy, then select **Save**.
+4. Return to **Manage** > **Environments** > **MCMC Import Test** and open **History**.
+5. Confirm **New Network Injection Policy** has status **Succeeded**. Enabling or changing subnet injection can cause up to 30 minutes of temporary connection instability while delegated connector containers initialize.
+
+Create a temporary connector to validate the private path independently of MCP OAuth:
+
+1. Sign in to [Power Apps](https://make.powerapps.com/) and select the `MCMC Import Test` environment.
+2. Open **Solutions**, create or open an unmanaged test solution, and select **New** > **Automation** > **Custom connector** > **Create from blank**.
+3. Name the connector `MCMC Private APIM Connectivity Test`.
+4. On **General**, set the scheme to `HTTPS`, the host to `example-apim-private.azure-api.net`, and the base URL to `/`. Do not configure an on-premises data gateway.
+5. On **Security**, select **No authentication**. This connector calls only the route-specific protected-resource metadata endpoints, which intentionally require no bearer token.
+6. On **Definition**, create an action named `Get Native OAuth metadata` with operation ID `GetNativeOAuthMetadata`. Under **Request**, select **Import from sample**, choose `GET`, and enter:
+
+	```text
+	https://example-apim-private.azure-api.net/.well-known/oauth-protected-resource/native/mcp
+	```
+
+7. Create a second action named `Get Gateway OAuth metadata` with operation ID `GetGatewayOAuthMetadata`. Import this `GET` URL:
+
+	```text
+	https://example-apim-private.azure-api.net/.well-known/oauth-protected-resource/gateway/mcp
+	```
+
+8. Confirm the definition has no validation errors and select **Create connector** or **Update connector**.
+9. On **Test**, select **New connection** and create the no-authentication connection. Return to the connector, refresh the connection list, and test each operation.
+
+The first operation can return this temporary response while Power Platform allocates its VNet-injected connector container:
+
+```text
+503 Container Allocation Successful
+Container allocated - .../PConnector/ExtnCtrDelegatedSvc. Please re-try.
+Retry-After: 60
+```
+
+This response is a successful allocation signal rather than an APIM failure. Wait at least 60 seconds, refresh the connector test page or connection to avoid a cached response, and retry. The completed validation must produce:
+
+- HTTP `200` from `GetNativeOAuthMetadata`, with `resource` set to the private `/native/mcp` URL.
+- HTTP `200` from `GetGatewayOAuthMetadata`, with `resource` set to the private `/gateway/mcp` URL.
+- The tenant-specific Microsoft Entra issuer in `authorization_servers` and the expected delegated scope in `scopes_supported` for both responses.
+
+These results prove that a connector running in `MCMC Import Test` can resolve the private APIM hostname through Private Link and reach both governed routes without public fallback. The private APIM hostname must still return `403` when requested from the public internet. Keep the temporary connector until the policy-association and connector-test evidence is recorded, then remove its connection and connector before final cleanup.
+
 #### Manually Recreate the Copilot Studio Agents
 
-In the target Dataverse-enabled environment, create two agents named `MCMC Public Native` and `MCMC Public Gateway`. Enable generative orchestration and give each agent these instructions:
+Create the four agents in the `MCMC Test 3` Sandbox environment:
+
+- Environment ID: `22222222-2222-4222-8222-222222222222`
+- Dataverse URL: `https://example.crm7.dynamics.com/`
+- Power Platform region: Japan West
+- Security group: `Meridian Account Team`
+- Private-network enterprise policy: `mcmc-private-connectivity`
+
+Before configuring the private agents, enable Managed Environments for `MCMC Test 3`, associate `mcmc-private-connectivity`, and wait for the network-injection operation to succeed. The public agents do not depend on this association.
+
+Enable generative orchestration on every agent and paste these exact instructions:
 
 ```text
 You are the MCMC customer demonstration agent. Use the connected MCP tools as the only source of customer data.
 
-Use list_customers when the user asks to list, show, count, or summarize the customers they can access. Use get_customer when the user supplies a customer ID or asks for one specific customer.
+Use list_accessible_customers when the user asks to list, show, count, or summarize the customers they can access. Use get_accessible_customer when the user supplies a customer ID or asks for one specific customer.
 
 Return only customer data provided by the selected tool. Never invent customers, identifiers, attributes, permissions, or tool results. If a tool rejects the request, returns an error, or is unavailable, state that the customer data could not be retrieved and do not fabricate an answer.
 ```
 
-Add exactly one OAuth-protected Streamable HTTP MCP server to each agent. Use **Tools** > **Add a tool** > **New tool** > **Model Context Protocol** with:
+Add exactly one OAuth-protected Streamable HTTP MCP server to each agent through **Tools** > **Add a tool** > **New tool** > **Model Context Protocol**. Use a new connector name if Power Platform reports that a previously deleted display name is still reserved.
 
-In **`<agent-display-name>`**, use **Tools** > **Add a tool** > **New tool** > **Model Context Protocol** with:
+##### MCMC Public Gateway
 
-- Server name: `<connector-display-name>`
-- Description: `<description-of-the-data-and-oauth-enforcement-boundary>`
-- Server URL: `<mcp-server-url>`
-- Authentication: **OAuth 2.0** > **Manual**
-- Client ID: `<connector-client-id>`
-- Client secret: read `<connector-client-secret-variable>` directly from the approved local secret source
-- Authorization URL: `https://login.microsoftonline.com/<tenant-id>/oauth2/v2.0/authorize`
-- Token URL template: `https://login.microsoftonline.com/<tenant-id>/oauth2/v2.0/token`
-- Refresh URL: `https://login.microsoftonline.com/<tenant-id>/oauth2/v2.0/token`
-- Scopes: `<fully-qualified-delegated-scope>`
+- Agent name:
+
+```text
+MCMC Public Gateway
+```
+
+- Enable generative orchestration:
+
+```text
+Yes
+```
+
+- Instructions:
+
+```text
+Use the exact shared instructions above.
+```
+
+- MCP server name:
+
+```text
+MCMC Public Gateway MCP test3
+```
+
+- Description:
+
+```text
+Retrieves customer records through the public APIM route where the gateway validates delegated access.
+```
+
+- MCP server URL:
+
+```text
+https://example-apim.azure-api.net/gateway/mcp
+```
+
+- Authentication:
+
+```text
+OAuth 2.0 > Manual
+```
+
+- Client ID source:
+
+```text
+MCMC_PUBLIC_GATEWAY_CONNECTOR_CLIENT_ID
+```
+
+- Client secret source:
+
+```text
+MCMC_PUBLIC_GATEWAY_CONNECTOR_CLIENT_SECRET
+```
+
+- Authorization URL:
+
+```text
+https://login.microsoftonline.com/11111111-1111-4111-8111-111111111111/oauth2/v2.0/authorize
+```
+
+- Token URL:
+
+```text
+https://login.microsoftonline.com/11111111-1111-4111-8111-111111111111/oauth2/v2.0/token
+```
+
+- Refresh URL:
+
+```text
+https://login.microsoftonline.com/11111111-1111-4111-8111-111111111111/oauth2/v2.0/token
+```
+
+- Scopes:
+
+```text
+api://example.onmicrosoft.com/mcmc-mcp/access_as_user offline_access
+```
+
+- PKCE:
+
+```text
+Enabled, if Copilot Studio exposes the option
+```
+
+- Entra implicit and hybrid flows:
+
+```text
+Leave Access tokens and ID tokens unchecked
+```
+
+- OAuth enforcement boundary:
+
+```text
+API Management gateway
+```
+
+##### MCMC Public Native
+
+- Agent name:
+
+```text
+MCMC Public Native
+```
+
+- Enable generative orchestration:
+
+```text
+Yes
+```
+
+- Instructions:
+
+```text
+Use the exact shared instructions above.
+```
+
+- MCP server name:
+
+```text
+MCMC Public Native MCP test3
+```
+
+- Description:
+
+```text
+Retrieves customer records through the public APIM route where the MCP server validates delegated access.
+```
+
+- MCP server URL:
+
+```text
+https://example-apim.azure-api.net/native/mcp
+```
+
+- Authentication:
+
+```text
+OAuth 2.0 > Manual
+```
+
+- Client ID source:
+
+```text
+MCMC_PUBLIC_NATIVE_CONNECTOR_CLIENT_ID
+```
+
+- Client secret source:
+
+```text
+MCMC_PUBLIC_NATIVE_CONNECTOR_CLIENT_SECRET
+```
+
+- Authorization URL:
+
+```text
+https://login.microsoftonline.com/11111111-1111-4111-8111-111111111111/oauth2/v2.0/authorize
+```
+
+- Token URL:
+
+```text
+https://login.microsoftonline.com/11111111-1111-4111-8111-111111111111/oauth2/v2.0/token
+```
+
+- Refresh URL:
+
+```text
+https://login.microsoftonline.com/11111111-1111-4111-8111-111111111111/oauth2/v2.0/token
+```
+
+- Scopes:
+
+```text
+api://example.onmicrosoft.com/mcmc-mcp/access_as_user offline_access
+```
+
+- PKCE:
+
+```text
+Enabled, if Copilot Studio exposes the option
+```
+
+- Entra implicit and hybrid flows:
+
+```text
+Leave Access tokens and ID tokens unchecked
+```
+
+- OAuth enforcement boundary:
+
+```text
+MCP service
+```
+
+##### MCMC Private Gateway
+
+- Agent name:
+
+```text
+MCMC Private Gateway
+```
+
+- Enable generative orchestration:
+
+```text
+Yes
+```
+
+- Instructions:
+
+```text
+Use the exact shared instructions above.
+```
+
+- MCP server name:
+
+```text
+MCMC Private Gateway MCP test3
+```
+
+- Description:
+
+```text
+Retrieves customer records through the private APIM route where the gateway validates delegated access.
+```
+
+- MCP server URL:
+
+```text
+https://example-apim-private.azure-api.net/gateway/mcp
+```
+
+- Authentication:
+
+```text
+OAuth 2.0 > Manual
+```
+
+- Client ID source:
+
+```text
+MCMC_PRIVATE_GATEWAY_CONNECTOR_CLIENT_ID
+```
+
+- Client secret source:
+
+```text
+MCMC_PRIVATE_GATEWAY_CONNECTOR_CLIENT_SECRET
+```
+
+- Authorization URL:
+
+```text
+https://login.microsoftonline.com/11111111-1111-4111-8111-111111111111/oauth2/v2.0/authorize
+```
+
+- Token URL:
+
+```text
+https://login.microsoftonline.com/11111111-1111-4111-8111-111111111111/oauth2/v2.0/token
+```
+
+- Refresh URL:
+
+```text
+https://login.microsoftonline.com/11111111-1111-4111-8111-111111111111/oauth2/v2.0/token
+```
+
+- Scopes:
+
+```text
+api://example.onmicrosoft.com/mcmc-mcp/access_as_user offline_access
+```
+
+- PKCE:
+
+```text
+Enabled, if Copilot Studio exposes the option
+```
+
+- Entra implicit and hybrid flows:
+
+```text
+Leave Access tokens and ID tokens unchecked
+```
+
+- OAuth enforcement boundary:
+
+```text
+API Management gateway
+```
+
+##### MCMC Private Native
+
+- Agent name:
+
+```text
+MCMC Private Native
+```
+
+- Enable generative orchestration:
+
+```text
+Yes
+```
+
+- Instructions:
+
+```text
+Use the exact shared instructions above.
+```
+
+- MCP server name:
+
+```text
+MCMC Private Native MCP test3
+```
+
+- Description:
+
+```text
+Retrieves customer records through the private APIM route where the MCP server validates delegated access.
+```
+
+- MCP server URL:
+
+```text
+https://example-apim-private.azure-api.net/native/mcp
+```
+
+- Authentication:
+
+```text
+OAuth 2.0 > Manual
+```
+
+- Client ID source:
+
+```text
+MCMC_PRIVATE_NATIVE_CONNECTOR_CLIENT_ID
+```
+
+- Client secret source:
+
+```text
+MCMC_PRIVATE_NATIVE_CONNECTOR_CLIENT_SECRET
+```
+
+- Authorization URL:
+
+```text
+https://login.microsoftonline.com/11111111-1111-4111-8111-111111111111/oauth2/v2.0/authorize
+```
+
+- Token URL:
+
+```text
+https://login.microsoftonline.com/11111111-1111-4111-8111-111111111111/oauth2/v2.0/token
+```
+
+- Refresh URL:
+
+```text
+https://login.microsoftonline.com/11111111-1111-4111-8111-111111111111/oauth2/v2.0/token
+```
+
+- Scopes:
+
+```text
+api://example.onmicrosoft.com/mcmc-mcp/access_as_user offline_access
+```
+
+- PKCE:
+
+```text
+Enabled, if Copilot Studio exposes the option
+```
+
+- Entra implicit and hybrid flows:
+
+```text
+Leave Access tokens and ID tokens unchecked
+```
+
+- OAuth enforcement boundary:
+
+```text
+MCP service
+```
+
+Read each client ID and secret from the repository-root `.env` key shown in that agent's section. Do not copy credential values into this document, source control, terminal arguments, or screenshots. Enable PKCE if Copilot Studio exposes that option. Leave the Entra **Access tokens** and **ID tokens** implicit-flow options disabled.
 
 Configure and validate the connection:
 
-1. Confirm that the agent name, instructions, and generative orchestration setting match the values above.
-2. Add the agent's single MCP tool and create a new connection using the values above.
-3. Enter the client secret directly in Copilot Studio. Never place it in source control, deployment settings, command-line arguments, or documentation.
-4. Save the connector definition and copy the generated callback URI. The URI is specific to the connector and target Power Platform environment.
-5. Add the callback URI to the matching entry in `entra_mcp_connector_redirect_uris`, run a Terraform plan, verify that only the intended application registration changes, and apply it.
-6. Return to Copilot Studio, create or repair the connection, and complete Microsoft Entra sign-in and delegated consent.
-7. Confirm that the expected MCP tools are discovered, enable the MCP server master switch, and save the agent.
-8. In Preview, ask `List all customers.` and `Get customer CUST-1001.` Verify that requests use only the agent variant's designated endpoint.
-9. Verify Native returns only records authorized for the signed-in user. Verify Gateway returns all four demonstration customers for James, Jane, and the deployment administrator, while Bill receives `403 Forbidden`.
+1. Save the MCP definition and copy its complete generated callback URI, beginning with `https://global.consent.azure-apim.net/redirect/`.
+2. Open the Entra app registration identified by that row's client ID and add the callback as a **Web** redirect URI.
+3. Return to Copilot Studio, create the connection, and complete Microsoft Entra sign-in and delegated consent.
+4. Open the MCP tool and verify that `List accessible customers` and `Get accessible customer` are discovered.
+5. Enable **Allow all**, save the agent, and start a new test session.
+6. Ask `List the customers I can access.` and `Get customer CUST-1001.`
+7. Verify Native returns only records authorized for the signed-in user. Verify Gateway returns all four demonstration customers for James, Jane, and the deployment administrator, while Bill receives `403 Forbidden`.
 
-For the current public MCMC variants, use the following Terraform outputs and local secret variables:
-
-| Setting | Public Native | Public Gateway |
-| --- | --- | --- |
-| Agent | `MCMC Public Native` | `MCMC Public Gateway` |
-| Connector | `MCMC Public Native MCP` | `MCMC Public Gateway MCP` |
-| Description | `Retrieves customer records through the APIM route where the MCP server validates the delegated user token.` | `Retrieves customer records through the APIM route where the gateway validates the delegated user token and customer-administrator group membership.` |
-| MCP server URL | `api_management_native_mcp_url` | `api_management_gateway_mcp_url` |
-| Client ID | `entra_mcp_connector_client_ids["public_native"]` | `entra_mcp_connector_client_ids["public_gateway"]` |
-| Client secret | `MCMC_PUBLIC_NATIVE_CONNECTOR_CLIENT_SECRET` | `MCMC_PUBLIC_GATEWAY_CONNECTOR_CLIENT_SECRET` |
-| Callback input | `entra_mcp_connector_redirect_uris["public_native"]` | `entra_mcp_connector_redirect_uris["public_gateway"]` |
-| OAuth enforcement | MCP service | API Management gateway |
-
-Both variants use `entra_tenant_id` for the tenant-specific authorization, token, and refresh URLs and `entra_mcp_delegated_scope` for the scope. See [Extend your agent with Model Context Protocol](https://learn.microsoft.com/microsoft-copilot-studio/agent-extend-action-mcp) for the Microsoft Copilot Studio MCP workflow.
+See [Extend your agent with Model Context Protocol](https://learn.microsoft.com/microsoft-copilot-studio/agent-extend-action-mcp) for the Microsoft Copilot Studio MCP workflow.
 
 The gateway route additionally requires the `groups` claim to contain the group identified by the `entra_customer_admin_group_id` Foundation output. Terraform manages the `mcmc-customer-admins` security group with James, Jane, and the deployment administrator as members; Bill is deliberately excluded. APIM returns `403 Forbidden` for an authenticated nonmember without invoking the trusted backend. After changing group membership or token group-claim settings, reauthenticate the Copilot Studio connection so it obtains a fresh access token.
 
@@ -215,22 +1043,42 @@ The CLI supports device-code authentication as its interactive flow. It does not
 
 ### Run as Each User
 
-James can access `CUST-1001` and `CUST-1002`:
+Select the authentication boundary with the endpoint path: `/native/mcp` makes the MCP service validate and authorize the token, while `/gateway/mcp` makes APIM validate the token and require membership in `mcmc-customer-admins` before invoking the trusted backend.
+
+James receives `CUST-1001` and `CUST-1002` through Native auth, and the complete four-customer catalog through Gateway auth:
 
 ```bash
-uv run --project msft-mcmc-mcp/msft-mcmc-mcp-service mcp --user james
+uv run --project msft-mcmc-mcp/msft-mcmc-mcp-service \
+	mcp --user james --url https://example-apim.azure-api.net/native/mcp
 ```
 
-Jane can access `CUST-1003` and `CUST-1004`:
-
 ```bash
-uv run --project msft-mcmc-mcp/msft-mcmc-mcp-service mcp --user jane
+uv run --project msft-mcmc-mcp/msft-mcmc-mcp-service \
+	mcp --user james --url https://example-apim.azure-api.net/gateway/mcp
 ```
 
-Bill has no customer access and receives an empty `customers` array:
+Jane receives `CUST-1003` and `CUST-1004` through Native auth, and the complete four-customer catalog through Gateway auth:
 
 ```bash
-uv run --project msft-mcmc-mcp/msft-mcmc-mcp-service mcp --user bill
+uv run --project msft-mcmc-mcp/msft-mcmc-mcp-service \
+	mcp --user jane --url https://example-apim.azure-api.net/native/mcp
+```
+
+```bash
+uv run --project msft-mcmc-mcp/msft-mcmc-mcp-service \
+	mcp --user jane --url https://example-apim.azure-api.net/gateway/mcp
+```
+
+Bill receives an empty `customers` array through Native auth. Gateway auth rejects Bill with `403 Forbidden` because he is deliberately excluded from `mcmc-customer-admins`:
+
+```bash
+uv run --project msft-mcmc-mcp/msft-mcmc-mcp-service \
+	mcp --user bill --url https://example-apim.azure-api.net/native/mcp
+```
+
+```bash
+uv run --project msft-mcmc-mcp/msft-mcmc-mcp-service \
+	mcp --user bill --url https://example-apim.azure-api.net/gateway/mcp
 ```
 
 ### Complete a Device-Code Run
@@ -315,4 +1163,4 @@ Successful runs print structured JSON containing the selected display name, the 
 
 ## Immediate Next Step
 
-Delete the two obsolete delegated connector connections from the `MCMC Import Test` environment in Power Apps, then manually recreate and validate the two agents in Copilot Studio Preview using the procedure above. The imported solutions, agents, custom connectors, connection references, and generated local deployment settings have already been removed; the development golden agents and Azure infrastructure remain intact.
+Private Power Platform networking is now validated from `MCMC Import Test`: Managed Environments and the network-injection association both succeeded, and both private APIM metadata operations returned `200` through the temporary custom connector. Manually create and validate `MCMC Private Native` and `MCMC Private Gateway` in Copilot Studio Preview using the private `/native/mcp` and `/gateway/mcp` URLs. Preserve the existing public agents and leave publishing disabled unless suitable capacity is available.
