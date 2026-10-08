@@ -41,9 +41,7 @@ flowchart LR
 | Container publication | [buildandpush.sh](msft-mcmc-deployment/msft-mcmc-deployment-infra/terraform/02-container/buildandpush.sh) | Remote ACR build, versioned tag, immutable digest handoff |
 | Application | [03-application/](msft-mcmc-deployment/msft-mcmc-deployment-infra/terraform/03-application/) | Two Container Apps, shared image-pull identity, `AcrPull`, APIM routes/operations/policies |
 | MCP service | [msft-mcmc-mcp-service/](msft-mcmc-mcp/msft-mcmc-mcp-service/) | Python 3.12 ASGI runtime, official MCP Python SDK v2, customer tools, token verification, tests |
-| Copilot Studio API setup | [setup.py](msft-mcmc-mcs/setup.py) | Experimental provisioning; not used by the manual procedure in [Power Platform setup](#power-platform-setup) |
-| Copilot Studio API teardown | [teardown.py](msft-mcmc-mcs/teardown.py) | Matches script-managed graphs; not a general teardown for UI-created agents or environment deletion |
-| Public agent sources | [msft-mcmc-mcs/](msft-mcmc-mcs/) | Agent workspaces and solution projects; optional packaging assets |
+| Copilot Studio | [Power Platform setup](#power-platform-setup) | Manual environment, agent, connection, callback, publication, and verification workflow |
 
 ## Network and Identity Design
 
@@ -788,7 +786,7 @@ Retain the generated image manifest for future Application evaluation. Keep stat
 
 ## Power Platform Setup
 
-This is the **manual setup procedure**. Create the environment, agents, MCP connections, and callbacks through the supported portals. Do not run [setup.py](msft-mcmc-mcs/setup.py), import the historical solutions, or use the provisioning scripts during this procedure. Azure deployment remains covered by [Pre-flight](#pre-flight) through [Verify](#verify).
+This is the **manual setup procedure**. Create the environment, agents, MCP connections, and callbacks through the supported portals. Azure deployment remains covered by [Pre-flight](#pre-flight) through [Verify](#verify).
 
 **Starting state:** the Azure deployment in [Pre-flight](#pre-flight) through [Verify](#verify) is complete, including four connector Entra applications and a private-network enterprise policy. This procedure creates a dedicated Power Platform environment and four standard-harness agents manually. It does not require deleting an existing deployment.
 
@@ -1444,7 +1442,7 @@ Record this agent's results for all three users before starting the next agent. 
 
 ## Remove Power Platform Ownership First
 
-Agent teardown, Teams catalog removal, environment deletion, and Azure destruction are different operations. The historical [teardown.py](msft-mcmc-mcs/teardown.py) expects script-managed schemas; do not use it against the manually created agents.
+Agent teardown, Teams catalog removal, environment deletion, and Azure destruction are different operations.
 
 1. Confirm the exact scope and recorded environment ID with the owner.
 
@@ -1696,26 +1694,6 @@ Each customer has string `customer_number`, `name`, `phone_number`, and `email`.
 APIM exposes `GET`, `POST`, and `DELETE` MCP operations, plus RFC 9728 protected-resource metadata. Policies enforce HTTPS, a 1 MiB body limit, IP-based rate limiting, a 300-second forwarding timeout, and unbuffered streaming. Gateway routes require group membership before removing Authorization. No APIM subscription key is required.
 
 Responses include `x-correlation-id`. Supplied values are retained only for 1-128 ASCII letters/digits/dots/underscores/hyphens; otherwise a generated identifier is used. Logs contain correlation ID, method, route, status, and duration, not tokens/passwords/customer bodies. APIM diagnostics send logs/metrics to Log Analytics with body logging disabled.
-
-# Agent Sources and Optional Packaging
-
-This section explains preserved assets; it is **not an alternative step in the primary operator playbook**.
-
-The public native/gateway component workspaces under [msft-mcmc-mcs/](msft-mcmc-mcs/) contain instructions, topics, connector definitions, connection references, MCP associations, and transportable `solution/src/` projects. `.mcs` synchronization state and solution build output are generated artifacts. [setup.py](msft-mcmc-mcs/setup.py) provides experimental API provisioning for four variants, not part of the manual playbook.
-
-## Shared Instructions
-
-Use the complete instructions in [Create the Public Gateway agent](#create-the-public-gateway-agent) for all four manually created agents. [Add the MCP server and register its OAuth callback](#add-the-mcp-server-and-register-its-oauth-callback) is the authoritative OAuth/callback procedure; do not copy historical callbacks, connection IDs, or package settings into a new environment.
-
-## Deferred Solution Import Workflow
-
-[deploy.sh](msft-mcmc-mcs/deploy.sh) is the older experimental public-agent solution workflow, not the manual setup procedure. It requires PAC 2.12.2, an authenticated named PAC profile, a compatible Dataverse environment, an `MCMC` publisher (`mcmc` prefix), and portable template rendering. `pac copilot pack` rejected enriched workspace connector/reference/MCP files; package construction uses `pac solution pack` on solution sources.
-
-Its stages are `bootstrap`, `bind`, and `verify`. Bootstrap imports a rendered unmanaged solution and creates untracked settings. Exit `3` signals required human action. Bind imports with target connection/connector IDs; secrets can need re-entry and delegated connection repair after import. Verify checks the graph without rebuilding and publishes only if explicitly enabled. `MCMC_OFFICE_AI_MANAGED=false` is an operator assertion, not automatic detection. Schema issues prevented use of PAC 2.12.2 `copilot status`; the workflow uses solution/Dataverse reads instead.
-
-Client secrets, tokens, connection IDs, callbacks, and synchronization state must not become source artifacts. Source placeholders cover tenant/client/scope/host; stable component IDs preserve solution relationships. Unmanaged solution deletion can leave agents/connectors/connections, and user-owned connections may require owner cleanup.
-
-The optional packaging workflow requires maintainer supervision, including secret restoration and connection repair. Operators following this deployment guide should use [Power Platform setup](#power-platform-setup).
 
 ## Documentation and Project Records
 
