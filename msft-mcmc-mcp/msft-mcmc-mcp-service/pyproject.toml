@@ -18,7 +18,7 @@ mcp = "mcmc_mcp.cli:main"
 [dependency-groups]
 dev = [
     "mypy>=1.18,<2",
-    "pytest>=8.4,<9",
+    "pytest>=8.4,<10",
     "pytest-asyncio>=1.2,<2",
     "ruff>=0.13,<1",
 ]
