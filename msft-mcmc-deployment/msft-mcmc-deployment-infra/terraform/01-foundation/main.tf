@@ -283,7 +283,7 @@ resource "azurerm_api_management" "private" {
   publisher_email               = var.api_management_publisher_email
   sku_name                      = "StandardV2_1"
   virtual_network_type          = "External"
-  public_network_access_enabled = false
+  public_network_access_enabled = var.private_api_management_public_network_access_enabled
   tags                          = var.tags
 
   identity {

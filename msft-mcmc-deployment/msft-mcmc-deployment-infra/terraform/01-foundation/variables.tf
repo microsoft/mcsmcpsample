@@ -75,6 +75,12 @@ variable "api_management_name" {
   type        = string
 }
 
+variable "private_api_management_public_network_access_enabled" {
+  description = "Enable only for the initial Foundation apply; disable after the private APIM endpoint has been created."
+  type        = bool
+  default     = false
+}
+
 variable "api_management_publisher_name" {
   description = "Publisher name displayed by Azure API Management."
   type        = string

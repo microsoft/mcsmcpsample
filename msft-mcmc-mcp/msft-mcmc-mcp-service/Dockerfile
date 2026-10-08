@@ -1,10 +1,8 @@
 FROM python:3.12-slim-bookworm
 
 ENV PATH="/app/.venv/bin:${PATH}" \
-    PIP_INDEX_URL=https://packagefeedproxy.microsoft.io/pypi/simple \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    UV_DEFAULT_INDEX=https://packagefeedproxy.microsoft.io/pypi/simple \
     UV_SYSTEM_CERTS=true
 
 WORKDIR /app

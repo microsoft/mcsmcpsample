@@ -19,24 +19,14 @@ remote_state {
 inputs = {
   subscription_id                          = local.root_locals.subscription_id
   tenant_id                                = local.root_locals.tenant_id
-  entra_verified_domain                    = "example.onmicrosoft.com"
+  entra_verified_domain                    = get_env("MCMC_ENTRA_VERIFIED_DOMAIN")
   entra_customer_admin_group_name          = "mcmc-customer-admins"
-  entra_customer_admin_user_principal_name = "admin@example.onmicrosoft.com"
+  entra_customer_admin_user_principal_name = get_env("MCMC_ENTRA_CUSTOMER_ADMIN_USER_PRINCIPAL_NAME")
   entra_mcp_connector_redirect_uris = {
-    public_native = [
-      "https://global.consent.azure-apim.net/redirect/mcmc-5fmcmc-20public-20native-20mcp-202-5f5e91a8aaf86d61ed",
-      "https://global.consent.azure-apim.net/redirect/crd78-5fmcmc-20public-20native-20mcp-5fdc637fe08ae6ec65",
-    ]
-    public_gateway = [
-      "https://global.consent.azure-apim.net/redirect/mcmc-5fmcmc-20public-20gateway-20mcp-202-5f5e91a8aaf86d61ed",
-      "https://global.consent.azure-apim.net/redirect/crd78-5fmcmc-20public-20gateway-20mcp-5fdc637fe08ae6ec65",
-    ]
-    private_native = [
-      "https://global.consent.azure-apim.net/redirect/crd78-5fmcmc-20private-20native-20mcp-5fdc637fe08ae6ec65",
-    ]
-    private_gateway = [
-      "https://global.consent.azure-apim.net/redirect/crd78-5fmcmc-20private-20gateway-20mcp-5fdc637fe08ae6ec65",
-    ]
+    public_native   = []
+    public_gateway  = []
+    private_native  = []
+    private_gateway = []
   }
   local_env_file_path                               = "${get_repo_root()}/.env"
   location                                          = local.root_locals.location
@@ -47,6 +37,6 @@ inputs = {
   container_apps_infrastructure_resource_group_name = "mcmc-container-apps-managed-rg"
   api_management_name                               = "mcmc-${local.root_locals.name_suffix}-apim"
   api_management_publisher_name                     = "Microsoft Copilot Studio MCP demo"
-  api_management_publisher_email                    = "admin@example.onmicrosoft.com"
+  api_management_publisher_email                    = get_env("MCMC_API_MANAGEMENT_PUBLISHER_EMAIL")
   tags                                              = local.root_locals.common_tags
 }

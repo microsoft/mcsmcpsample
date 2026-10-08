@@ -1,7 +1,7 @@
 locals {
   subscription_id = get_env("ARM_SUBSCRIPTION_ID")
   tenant_id       = get_env("ARM_TENANT_ID")
-  location        = "swedencentral"
+  location        = "japaneast"
   name_suffix     = substr(local.subscription_id, 0, 8)
 
   common_tags = {

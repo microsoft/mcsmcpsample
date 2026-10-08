@@ -123,6 +123,10 @@ resource "azuread_service_principal" "mcp_cli" {
 resource "azuread_application" "mcp_connector" {
   for_each = local.mcp_connector_clients
 
+  lifecycle {
+    ignore_changes = [web]
+  }
+
   display_name     = each.value.display_name
   description      = "Confidential client used by the corresponding Copilot Studio MCP connector."
   sign_in_audience = "AzureADMyOrg"

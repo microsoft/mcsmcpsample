@@ -27,10 +27,6 @@ dev = [
 requires = ["hatchling>=1.27,<2"]
 build-backend = "hatchling.build"
 
-[[tool.uv.index]]
-url = "https://packagefeedproxy.microsoft.io/pypi/simple"
-default = true
-
 [tool.hatch.build.targets.wheel]
 packages = ["src/mcmc_mcp"]
 
